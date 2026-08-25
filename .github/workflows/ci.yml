@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: nidaro
+          POSTGRES_USER: nidaro
+          POSTGRES_PASSWORD: nidaro
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U nidaro -d nidaro"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:8
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: uv sync --all-groups --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run pytest
+        env:
+          NIDARO_DATABASE_URL: postgresql+psycopg://nidaro:nidaro@localhost:5432/nidaro
+          NIDARO_REDIS_URL: redis://localhost:6379/0
