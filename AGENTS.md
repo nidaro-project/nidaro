@@ -67,3 +67,19 @@ The only sanctioned exception mechanism is `.quality/allowlist.toml`
 inline suppression comments and no per-tool ignore files.
 
 <!-- aufsicht:end -->
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in the repository's Rohrpost log. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the standard labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a single-context layout. See `docs/agents/domain.md`.
+
+@RTK.md
