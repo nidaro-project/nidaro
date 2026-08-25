@@ -16,6 +16,14 @@ uv run nidaro-seed
 uv run uvicorn nidaro.app:create_app --factory --reload
 ```
 
+Install Aufsicht as an isolated developer tool. It is not part of Nidaro's Python environment:
+
+```bash
+uv tool install aufsicht==0.2.2
+```
+
+Use `aufsicht fast` during development and `aufsicht full` before completing a change.
+
 The API is available at `http://localhost:8000`. `/health` is process-only. `/ready` checks PostgreSQL and Redis. Set `NIDARO_MODEL` and the provider API key before using `/api/v1/assistant/chat`.
 
 Run the worker and scheduler in separate terminals:

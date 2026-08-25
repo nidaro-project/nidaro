@@ -30,9 +30,6 @@ jobs:
         with:
           python-version: "3.14"
       - run: uv sync --all-groups --frozen
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run pyright
       - run: uv run pytest
         env:
           NIDARO_DATABASE_URL: postgresql+psycopg://nidaro:nidaro@localhost:5432/nidaro
