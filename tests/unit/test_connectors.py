@@ -25,7 +25,7 @@ class FakeConnector:
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_fake_connector_sync_and_registry():
     registry = ConnectorRegistry()
     connector = FakeConnector()

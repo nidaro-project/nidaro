@@ -72,7 +72,7 @@ class FakeFactRepository:
         return []
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_household_service_is_idempotent():
     service = HouseholdService(FakeHouseholdRepository())
     first = await service.ensure_household(CreateHouseholdRequest())
@@ -81,7 +81,7 @@ async def test_household_service_is_idempotent():
     assert second.name == "My Family"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_event_service_creates_typed_view():
     household_id = uuid4()
     event = await CalendarService(FakeEventRepository()).create_event(
@@ -92,7 +92,7 @@ async def test_event_service_creates_typed_view():
     assert event.title == "Swimming"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_task_service_completes_task():
     service = TaskService(FakeTaskRepository())
     task = await service.create_task(CreateTaskRequest(household_id=uuid4(), title="Pack bag"))
@@ -100,7 +100,7 @@ async def test_task_service_completes_task():
     assert await service.complete_task(task.id)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_memory_service_searches_through_repository():
     service = MemoryService(FakeFactRepository())
     fact = await service.remember_fact(
