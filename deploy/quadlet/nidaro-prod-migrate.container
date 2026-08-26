@@ -1,0 +1,25 @@
+# One-shot gate: schema migration + seed, both idempotent.
+#
+# Runs only after PostgreSQL and Redis report healthy (their Notify=healthy
+# turns that into a systemd ordering fact). The API, worker, and scheduler
+# units Require this unit, so a failed migration stops the chain instead of
+# starting a broken stack. A plain restart of an app unit does not re-run
+# migrations; deploy/update.sh restarts this unit explicitly.
+[Unit]
+Description=Nidaro prod migrations and seed
+After=nidaro-prod-db.container nidaro-prod-redis.container
+Requires=nidaro-prod-db.container nidaro-prod-redis.container
+
+[Container]
+Image=localhost/nidaro-prod:latest
+Pod=nidaro-prod.pod
+ContainerName=nidaro-prod-migrate
+EnvironmentFile=%h/.config/nidaro/prod.env
+Exec=sh -c "alembic upgrade head && nidaro-seed"
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

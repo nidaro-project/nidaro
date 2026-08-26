@@ -1,0 +1,21 @@
+# Taskiq scheduler of the prod pod. nidaro.jobs.scheduler exports a
+# TaskiqScheduler with a LabelScheduleSource, so passing the tasks module
+# on the command line is what registers the cron-labelled tasks.
+[Unit]
+Description=Nidaro prod Taskiq scheduler
+After=nidaro-prod-migrate.container
+Requires=nidaro-prod-migrate.container
+
+[Container]
+Image=localhost/nidaro-prod:latest
+Pod=nidaro-prod.pod
+ContainerName=nidaro-prod-scheduler
+EnvironmentFile=%h/.config/nidaro/prod.env
+Exec=taskiq scheduler nidaro.jobs.scheduler:scheduler nidaro.jobs.tasks --skip-first-run
+
+[Service]
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

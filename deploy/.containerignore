@@ -1,0 +1,19 @@
+# Build context for the production image: everything not needed to build
+# and install the wheel is excluded. The image needs pyproject.toml,
+# uv.lock, README.md, src/, migrations/, and alembic.ini only.
+.git
+.venv
+.agents
+.claude
+.quality
+.rohrpost
+.github
+.pytest_cache
+.ruff_cache
+.coverage
+docs
+tests
+compose.yml
+.env
+deploy
+**/__pycache__

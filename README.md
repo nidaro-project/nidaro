@@ -29,11 +29,15 @@ The API is available at `http://localhost:8000`. `/health` is process-only. `/re
 Run the worker and scheduler in separate terminals:
 
 ```bash
-uv run taskiq worker nidaro.jobs.broker:broker --fs-discover
-uv run taskiq scheduler nidaro.jobs.scheduler:scheduler --skip-first-run
+uv run taskiq worker nidaro.jobs.broker:broker nidaro.jobs.tasks
+uv run taskiq scheduler nidaro.jobs.scheduler:scheduler nidaro.jobs.tasks --skip-first-run
 ```
 
 Use `podman compose down` to stop the local services. Integration tests require the same PostgreSQL and Redis services and are marked with `integration`.
+
+## Production
+
+Nidaro can run as a fully containerized service in its own Podman pod, next to the development setup. See [docs/deployment.md](docs/deployment.md).
 
 ## Layout
 

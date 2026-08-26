@@ -1,0 +1,33 @@
+# PostgreSQL 17 of the prod pod.
+#
+# Keep the image default (root) user: the entrypoint chowns a fresh volume
+# on first initialization. POSTGRES_PASSWORD comes from the environment
+# file; podman reads that file on the host at container start.
+# Notify=healthy makes this unit "started" only once pg_isready passes, so
+# the migration unit orders itself against a database that accepts
+# connections, not against a container that merely exists.
+[Unit]
+Description=Nidaro prod PostgreSQL 17
+
+[Container]
+Image=docker.io/library/postgres:17-alpine
+Pod=nidaro-prod.pod
+ContainerName=nidaro-prod-db
+Environment=POSTGRES_DB=nidaro
+Environment=POSTGRES_USER=nidaro
+EnvironmentFile=%h/.config/nidaro/prod.env
+Volume=nidaro-prod-pgdata.volume:/var/lib/postgresql/data
+HealthCmd=pg_isready -U nidaro -d nidaro
+HealthInterval=5s
+HealthTimeout=3s
+HealthRetries=12
+HealthStartPeriod=10s
+Notify=healthy
+
+[Service]
+Restart=always
+RestartSec=3
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

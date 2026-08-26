@@ -1,5 +1,9 @@
-from taskiq_redis import RedisScheduleSource
+from taskiq import TaskiqScheduler
+from taskiq.schedule_sources import LabelScheduleSource
 
-from nidaro.config import get_settings
+from nidaro.jobs.broker import broker
 
-scheduler = RedisScheduleSource(get_settings().redis_url)
+scheduler = TaskiqScheduler(
+    broker=broker,
+    sources=[LabelScheduleSource(broker)],
+)

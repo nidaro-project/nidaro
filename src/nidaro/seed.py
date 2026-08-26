@@ -14,7 +14,11 @@ async def seed() -> None:
     household = await repository.get()
     if household is None:
         household = await repository.create(CreateHouseholdRequest(timezone=settings.timezone))
-    existing = {member.name for member in household.members}
+        # A freshly created household has no members; the detached instance
+        # from create() cannot lazy-load the relationship.
+        existing: set[str] = set()
+    else:
+        existing = {member.name for member in household.members}
     for name, role in (("Alex", "parent"), ("Emma", "child")):
         if name not in existing:
             await repository.add_member(household.id, name, role)

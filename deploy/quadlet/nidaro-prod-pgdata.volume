@@ -1,0 +1,4 @@
+# PostgreSQL data of the prod pod. Podman volume name:
+# systemd-nidaro-prod-pgdata (the systemd- prefix marks Quadlet ownership).
+[Volume]
+Label=app=nidaro env=prod

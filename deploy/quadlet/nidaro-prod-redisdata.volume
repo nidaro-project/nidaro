@@ -1,0 +1,5 @@
+# Redis data of the prod pod. Podman volume name:
+# systemd-nidaro-prod-redisdata (the systemd- prefix marks Quadlet
+# ownership). Redis is only a task broker; PostgreSQL owns family state.
+[Volume]
+Label=app=nidaro env=prod

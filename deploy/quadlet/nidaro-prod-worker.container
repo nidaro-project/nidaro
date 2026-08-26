@@ -1,0 +1,21 @@
+# Taskiq worker of the prod pod. The module argument is explicit because
+# --fs-discover globs the working directory and finds nothing in an image
+# where the package comes from a wheel.
+[Unit]
+Description=Nidaro prod Taskiq worker
+After=nidaro-prod-migrate.container
+Requires=nidaro-prod-migrate.container
+
+[Container]
+Image=localhost/nidaro-prod:latest
+Pod=nidaro-prod.pod
+ContainerName=nidaro-prod-worker
+EnvironmentFile=%h/.config/nidaro/prod.env
+Exec=taskiq worker nidaro.jobs.broker:broker nidaro.jobs.tasks
+
+[Service]
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

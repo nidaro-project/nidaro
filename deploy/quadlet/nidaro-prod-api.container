@@ -1,0 +1,31 @@
+# The Nidaro API. --factory is required because create_app() is a factory,
+# and --host 0.0.0.0 is load-bearing: uvicorn's default 127.0.0.1 would be
+# unreachable through the pod's published port.
+#
+# The healthcheck is for `podman ps` observability only. It is deliberate
+# that an unhealthy API is not killed: systemd Restart=always covers
+# crashes, and /ready stays the honest signal for PostgreSQL or Redis
+# problems.
+[Unit]
+Description=Nidaro prod API (uvicorn)
+After=nidaro-prod-migrate.container
+Requires=nidaro-prod-migrate.container
+
+[Container]
+Image=localhost/nidaro-prod:latest
+Pod=nidaro-prod.pod
+ContainerName=nidaro-prod-api
+EnvironmentFile=%h/.config/nidaro/prod.env
+Exec=uvicorn nidaro.app:create_app --factory --host 0.0.0.0 --port 8000
+HealthCmd=python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
+
+[Service]
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

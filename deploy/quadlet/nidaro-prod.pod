@@ -1,0 +1,14 @@
+# The Nidaro prod pod: one network namespace shared by all containers.
+# PostgreSQL and Redis are reachable only inside the pod (localhost:5432,
+# localhost:6379). The single published port is the API. Development keeps
+# host ports 5432/6379 for its own compose project; the two never meet.
+[Unit]
+Description=Nidaro prod pod (API published on 8100)
+
+[Pod]
+PodName=nidaro-prod
+HostName=nidaro-prod
+PublishPort=8100:8000
+
+[Install]
+WantedBy=default.target

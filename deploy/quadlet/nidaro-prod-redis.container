@@ -1,0 +1,22 @@
+# Redis 8 of the prod pod. Task broker only; PostgreSQL owns family state.
+[Unit]
+Description=Nidaro prod Redis 8
+
+[Container]
+Image=docker.io/library/redis:8-alpine
+Pod=nidaro-prod.pod
+ContainerName=nidaro-prod-redis
+Volume=nidaro-prod-redisdata.volume:/data
+HealthCmd=redis-cli ping
+HealthInterval=5s
+HealthTimeout=3s
+HealthRetries=12
+Notify=healthy
+
+[Service]
+Restart=always
+RestartSec=3
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
