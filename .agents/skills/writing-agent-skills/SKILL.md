@@ -71,4 +71,5 @@ Every file other than `SKILL.md` must be reachable by a link from `SKILL.md` (or
 - Description triggers on the intended cases only.
 - Every step ends on a checkable completion criterion.
 - Every linked file exists; every file is linked.
+- Every script in `scripts/` runs clean against a fixture in `tests/`, not against live state that shifts between runs.
 - No meaning appears in two places.
