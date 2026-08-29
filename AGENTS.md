@@ -7,6 +7,8 @@
 - Keep PostgreSQL as the authoritative family state. Redis is only a task broker.
 - Keep the boundary `route/tool/worker -> service -> repository -> database`.
 - Do not add secrets to source control.
+- Prefix shell commands with `rtk` (see `RTK.md`). It is a token-optimizing proxy; `rtk proxy <cmd>` runs the raw command when you need unfiltered output.
+- When a request hinges on a runtime property ("runs in the background", "survives closing the session", "only the user can trigger it"), verify the chosen mechanism has that property before building. If two mechanisms plausibly fit, confirm the split with the user first.
 - Use `aufsicht fast` during implementation and `aufsicht full` before a change is complete.
 
 ## Nidaro architecture
@@ -37,11 +39,17 @@ spec (v5.1). `quality-fast` and `quality-full` come from the pinned
 1. Read repository conventions.
 2. Understand the change. Inspect existing patterns before writing new ones.
 3. Implement the smallest complete solution.
-4. Run quality-fast. Fix failures. Repeat until clean.
-5. Run quality-full.
-6. If a ratchet failed, find and fix what you added. Do not offset it with an
+4. Format and lint changed Python only with the pinned analyzers: versions
+   live in `.quality/toolchain.lock`, ruff config in `.quality/ruff.toml`
+   (line-length 100). Command shape:
+   `uvx ruff@<pin from toolchain.lock> format --config .quality/ruff.toml <paths>`.
+   This includes scripts under `.pi/extensions/`. Ambient installs disagree
+   with the pin and the config.
+5. Run quality-fast. Fix failures. Repeat until clean.
+6. Run quality-full.
+7. If a ratchet failed, find and fix what you added. Do not offset it with an
    unrelated fix.
-7. Stop. Report status. Do not self-approve.
+8. Stop. Report status. Do not self-approve.
 
 Never, under any circumstances:
 
