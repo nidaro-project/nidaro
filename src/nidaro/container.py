@@ -17,6 +17,8 @@ from nidaro.meals.repository import MealsRepository
 from nidaro.meals.service import MealsService
 from nidaro.memory.repository import FactRepository
 from nidaro.memory.service import MemoryService
+from nidaro.school.repository import SchoolRepository
+from nidaro.school.service import SchoolService
 from nidaro.sources.repository import SourceRepository
 from nidaro.sources.service import SourceService
 from nidaro.tasks.repository import TaskRepository
@@ -28,6 +30,7 @@ class ApplicationServices:
     household: HouseholdService
     calendar: CalendarService
     meals: MealsService
+    school: SchoolService
     tasks: TaskService
     memory: MemoryService
     commitments: CommitmentService
@@ -42,6 +45,7 @@ class ApplicationServices:
             household=HouseholdService(HouseholdRepository(sessions)),
             calendar=CalendarService(CalendarRepository(sessions), HouseholdRepository(sessions)),
             meals=MealsService(MealsRepository(sessions)),
+            school=SchoolService(SchoolRepository(sessions)),
             tasks=TaskService(TaskRepository(sessions)),
             memory=MemoryService(FactRepository(sessions)),
             commitments=CommitmentService(CommitmentRepository(sessions)),
