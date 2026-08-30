@@ -6,9 +6,13 @@ anywhere in this path. Occurrence identity is ``(event_id, occurrence
 date)``; wall-clock times are interpreted naturally in the household
 timezone, so DST transitions just shift the UTC offset (zoneinfo
 defaults, no special-casing).
+
+The same arithmetic serves the write side: ``first_weekday_on_or_after``
+pins a newly created series to its first occurrence, so read expansion
+and write anchoring can never disagree about where a series begins.
 """
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from datetime import date, datetime, time, timedelta, timezone
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -39,6 +43,20 @@ def resolve_timezone(name: str | None) -> ZoneInfo:
         except (ZoneInfoNotFoundError, ValueError, KeyError):
             pass
     return ZoneInfo("UTC")
+
+
+def first_weekday_on_or_after(day: date, weekdays: Iterable[int]) -> date:
+    """First date on or after ``day`` whose weekday is one of ``weekdays``.
+
+    ``weekdays`` must be non-empty (0=Mon..6=Sun). This is the canonical
+    anchor for a new weekly series: the stored ``starts_at`` is the first
+    actual occurrence, so read-time expansion needs no special case.
+    """
+    candidate = day
+    wanted = set(weekdays)
+    while candidate.weekday() not in wanted:
+        candidate += timedelta(days=1)
+    return candidate
 
 
 def validate_range(from_date: date, to_date: date) -> None:

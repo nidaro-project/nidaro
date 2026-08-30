@@ -4,28 +4,7 @@
 {% block title %}Calendar · nidaro{% endblock %}
 {% block content %}
 <link rel="stylesheet" href="/static/css/calendar.css">
-
-<header class="cal-head">
-  <a class="btn btn--ghost" href="/calendar?view={{ view }}&o={{ o - 1 }}" aria-label="Previous {{ view }}">‹</a>
-  <h2 class="cal-range">{{ range_label }}</h2>
-  <a class="btn btn--ghost" href="/calendar?view={{ view }}&o={{ o + 1 }}" aria-label="Next {{ view }}">›</a>
-  {% if o != 0 %}<a class="btn btn--dashed" href="/calendar?view={{ view }}&o=0">Today</a>{% endif %}
-  <div class="cal-head__spacer"></div>
-  <nav class="cal-tabs" aria-label="Calendar view">
-    {% for key, label in view_items %}
-    <a class="cal-tabs__tab{% if key == view %} cal-tabs__tab--on{% endif %}"
-       href="/calendar?view={{ key }}&o=0">{{ label }}</a>
-    {% endfor %}
-  </nav>
-</header>
-
-{% if view == "month" %}
-  {% include "calendar_month.html" %}
-{% elif view == "week" %}
-  {% include "calendar_week.html" %}
-{% else %}
-  {% include "calendar_day.html" %}
-{% endif %}
+{% include "calendar_main.html" %}
 
 <script>
   (function () {

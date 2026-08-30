@@ -70,11 +70,17 @@ class CalendarRepository:
         participant_ids = fields.pop("participants")
         async with self.sessions.begin() as session:
             event = Event(**fields)
+            # Always assign the collection (empty or not): the returned event
+            # is detached once the session closes, and an unloaded lazy
+            # relationship cannot be read afterwards.
+            members: list[FamilyMember] = []
             if participant_ids:
-                members = await session.scalars(
-                    select(FamilyMember).where(FamilyMember.id.in_(participant_ids))
+                members = list(
+                    await session.scalars(
+                        select(FamilyMember).where(FamilyMember.id.in_(participant_ids))
+                    )
                 )
-                event.participants = list(members)
+            event.participants = members
             session.add(event)
             await session.flush()
             return event
