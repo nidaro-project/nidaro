@@ -43,3 +43,22 @@ _Avoid_: meal entry, calendar event
 **Slot**:
 One of the fixed eating times a day is planned in: breakfast, lunch, dinner, snacks. A slot may hold more than one planned meal.
 _Avoid_: mealtime, category
+
+**School portal**:
+The passive, read-only school section of Nidaro. It shows information gathered from school systems and never writes back or triggers a change there.
+_Avoid_: school integration (implies interactivity that does not exist)
+
+**Today at school**:
+One kid's lessons for the day — the timetable with substitution applied. The first thing the school portal shows per kid.
+_Avoid_: daily view, rozvrh (the Czech term for the raw timetable)
+
+**What-to-pack overview**:
+A derived view naming what a kid needs for today's and the next day's lessons, computed from the school portal's timetable. Not school data; computed and kept by Nidaro.
+_Avoid_: packing list (derived per school day, not a stored list)
+
+**Bakaláři**:
+The Czech school information system; the primary source of the school portal.
+_Avoid_: Baccalauréat (the French exam), Bacalaji
+
+**Škola OnLine**:
+A Czech school information system, second to Bakaláři. Observed for a future gatherer, not built.
