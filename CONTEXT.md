@@ -62,3 +62,19 @@ _Avoid_: Baccalauréat (the French exam), Bacalaji
 
 **Škola OnLine**:
 A Czech school information system, second to Bakaláři. Observed for a future gatherer, not built.
+
+**Subject**:
+A school course a kid is taught, named by the school with a short code and a long name. The anchor the what-to-pack mapping keys on.
+_Avoid_: class (the kid's school class group, třída), course
+
+**Lesson**:
+One teaching slot a kid has on a date — subject, teacher, room, time window — with substitutions already applied. What the school portal shows for Today at school.
+_Avoid_: timetable entry, period, hodina
+
+**Grade**:
+A mark a kid received for a subject, kept with its weight and confirmation state. The value may be a number or not.
+_Avoid_: mark, známka (as code terms)
+
+**Homework**:
+A task a kid must do for a subject by a due date, gathered from the school system. Shown with attachment names only, never file bodies. Empty when the school does not enter homework.
+_Avoid_: assignment
