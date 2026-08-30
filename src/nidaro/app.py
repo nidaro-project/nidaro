@@ -8,7 +8,7 @@ from nidaro.assistant.runtime import AssistantRuntime
 from nidaro.config import get_settings
 from nidaro.container import ApplicationServices
 from nidaro.db.engine import create_engine, create_session_factory
-from nidaro.web.routes import assistant, family, health, prototype, ui
+from nidaro.web.routes import assistant, calendar, family, health, prototype, ui
 
 
 def create_app() -> FastAPI:
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(family.router)
     app.include_router(assistant.router)
     app.include_router(prototype.router)
+    app.include_router(calendar.router)
     app.include_router(ui.router)
     app.mount("/static", StaticFiles(directory=ui.STATIC_DIR), name="static")
 

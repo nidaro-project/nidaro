@@ -110,10 +110,10 @@ STATE=$(read_value "document.documentElement.dataset.theme")
 
 # ------------------- 5. placeholder sections render ------------------------------
 
-chrome-agent "$INSTANCE" Page.navigate "{\"url\":\"$BASE_URL/calendar\"}" >/dev/null
+chrome-agent "$INSTANCE" Page.navigate "{\"url\":\"$BASE_URL/meals\"}" >/dev/null
 wait_loaded
 STATE=$(read_value "(()=>({h2:document.querySelector('.placeholder h2')?.textContent,icon:!!document.querySelector('.placeholder .tile svg')}))()")
-echo "$STATE" | grep -q '"h2":"Calendar is on its way"' || fail "placeholder heading" "Calendar is on its way" "$STATE"
+echo "$STATE" | grep -q '"h2":"Meals is on its way"' || fail "placeholder heading" "Meals is on its way" "$STATE"
 echo "$STATE" | grep -q '"icon":true' || fail "placeholder icon present" "true" "$STATE"
 
 # ------------------- 6. no page exceptions or broken requests -------------------
