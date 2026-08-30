@@ -5,6 +5,9 @@ colors, type, spacing, and shapes from the tokens defined here and implemented
 in `src/nidaro/web/static/css/tokens.css`. If a value is not in this file or in
 `tokens.css`, it does not belong in the UI.
 
+The design-goal mockup this system was built from lives at
+[docs/design-goal.png](design-goal.png).
+
 ## Principles
 
 1. **Warm, calm, competent.** nidaro is a family assistant. Surfaces feel like

@@ -16,7 +16,7 @@ class Household(TimestampMixin, Base):
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
     name: Mapped[str] = mapped_column(String(200))
     timezone: Mapped[str] = mapped_column(String(64))
-    members: Mapped[list[FamilyMember]] = relationship(back_populates="household")
+    members: Mapped[list["FamilyMember"]] = relationship(back_populates="household")
 
 
 class FamilyMember(TimestampMixin, Base):
