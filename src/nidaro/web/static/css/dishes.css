@@ -1,0 +1,198 @@
+/* Typical dishes — dish configuration page ([mealplan-5]).
+   Semantic tokens only, per DESIGN.md. Pills use the shared .tag, buttons .btn. */
+
+.dishes-head {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-xs) var(--space-lg);
+}
+
+.dishes-head__spacer {
+  flex: 1;
+}
+
+.dishes-title {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+}
+
+.dishes-sub {
+  margin-top: var(--space-xs);
+  color: var(--color-text-2);
+  font-size: var(--text-md);
+}
+
+.dishes-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ---- add form ---- */
+
+.dishes-new summary {
+  list-style: none;
+  width: max-content;
+}
+
+.dishes-new summary::-webkit-details-marker {
+  display: none;
+}
+
+.dishes-new[open] summary {
+  display: none;
+}
+
+/* ---- labeled forms (add + expanding editor) ---- */
+
+.dishes-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+
+.dishes-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-2);
+}
+
+.dishes-label--wide {
+  grid-column: 1 / -1;
+}
+
+.dishes-form__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.dishes-input {
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-width: 0;
+}
+
+.dishes-input--notes {
+  resize: vertical;
+  font-family: var(--font-sans);
+}
+
+/* ---- table ---- */
+
+.dishes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dishes-table th {
+  text-align: left;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-3);
+  padding: var(--space-2xs) var(--space-sm);
+  border-bottom: 1px solid var(--color-line-strong);
+}
+
+.dishes-table td {
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--color-line);
+  vertical-align: top;
+}
+
+.dishes-cell-name {
+  white-space: nowrap;
+}
+
+.dishes-open {
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.dishes-open:hover {
+  color: var(--color-accent-text);
+  text-decoration: underline;
+}
+
+.dishes-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+}
+
+.dishes-cell-notes {
+  color: var(--color-text-2);
+  font-size: var(--text-sm);
+  max-width: 34rem;
+}
+
+.dishes-cell-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.dishes-none {
+  color: var(--color-text-3);
+  text-align: center;
+  padding-block: var(--space-xl);
+}
+
+/* ---- row actions ---- */
+
+.dishes-act {
+  padding: var(--space-2xs) var(--space-sm);
+  color: var(--color-text-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+}
+
+.dishes-act:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.dishes-act--danger:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.dishes-xform {
+  display: inline-flex;
+  margin: 0;
+}
+
+/* ---- expanding editor row ---- */
+
+.dishes-edit-row td {
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-line-strong);
+}
+
+@media (max-width: 56rem) {
+  .dishes-col-notes {
+    display: none;
+  }
+
+  .dishes-form {
+    grid-template-columns: 1fr;
+  }
+}

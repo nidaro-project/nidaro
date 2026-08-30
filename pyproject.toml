@@ -48,3 +48,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nidaro"]
+
+# deptry treats the project's own package (src/nidaro layout) as an undeclared
+# third-party dependency, which floods DEP001 with self-import false positives
+# (155 on main). Declaring it first-party keeps DEP001 armed for genuinely
+# missing third-party imports while silencing only those false positives.
+[tool.deptry]
+known_first_party = ["nidaro"]

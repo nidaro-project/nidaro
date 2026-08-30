@@ -1,0 +1,91 @@
+{% import "components/icons.html" as icons %}
+{# The dishes table block. Full page includes it; HTMX actions swap it (id="dishes-block"). #}
+{% if has_household %}
+<div class="dishes-block" id="dishes-block">
+  <details class="dishes-new">
+    <summary class="btn btn--primary">{{ icons.plus() }} Add a dish</summary>
+    <form class="dishes-form dishes-form--new" hx-post="/meals/dishes" hx-target="#dishes-block" hx-swap="outerHTML">
+      <label class="dishes-label">
+        Name
+        <input class="dishes-input" name="name" placeholder="Dish name" autocomplete="off" required>
+      </label>
+      <label class="dishes-label">
+        Tags
+        <input class="dishes-input" name="tags" placeholder="quick, favorite, veggie…" autocomplete="off">
+      </label>
+      <label class="dishes-label dishes-label--wide">
+        Notes
+        <textarea class="dishes-input dishes-input--notes" name="notes" rows="2"
+                  placeholder="Sides, who likes it, quirks…"></textarea>
+      </label>
+      <div class="dishes-form__actions">
+        <button class="btn btn--primary">Save dish</button>
+      </div>
+    </form>
+  </details>
+
+  <table class="dishes-table">
+    <thead>
+      <tr><th>Dish</th><th>Tags</th><th class="dishes-col-notes">Notes</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for d in dishes %}
+      <tr class="dishes-row">
+        <td class="dishes-cell-name">
+          <button class="dishes-open" title="Edit {{ d.name }}"
+                  hx-get="/meals/dishes?edit={{ d.id }}" hx-target="#dishes-block" hx-swap="outerHTML">{{ d.name }}</button>
+        </td>
+        <td>
+          <span class="dishes-tags">
+            {%- for t in d.tags %}<span class="tag">{{ t }}</span>{% endfor -%}
+          </span>
+        </td>
+        <td class="dishes-col-notes dishes-cell-notes">{{ d.notes or "" }}</td>
+        <td class="dishes-cell-actions">
+          <button class="dishes-act" hx-get="/meals/dishes?edit={{ d.id }}"
+                  hx-target="#dishes-block" hx-swap="outerHTML">Edit</button>
+          <form class="dishes-xform" hx-post="/meals/dishes/{{ d.id }}/delete" hx-target="#dishes-block"
+                hx-swap="outerHTML" hx-confirm="Delete “{{ d.name }}”? Planned meals keep their name.">
+            <button class="dishes-act dishes-act--danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% if edit == d.id %}
+      <tr class="dishes-edit-row">
+        <td colspan="4">
+          <form class="dishes-form dishes-form--edit" hx-post="/meals/dishes/{{ d.id }}"
+                hx-target="#dishes-block" hx-swap="outerHTML">
+            <label class="dishes-label">
+              Name
+              <input class="dishes-input" name="name" value="{{ d.name }}" autocomplete="off" required>
+            </label>
+            <label class="dishes-label">
+              Tags
+              <input class="dishes-input" name="tags" value="{{ d.tags | join(', ') }}" autocomplete="off">
+            </label>
+            <label class="dishes-label dishes-label--wide">
+              Notes
+              <textarea class="dishes-input dishes-input--notes" name="notes" rows="2">{{ d.notes or "" }}</textarea>
+            </label>
+            <div class="dishes-form__actions">
+              <button class="btn btn--primary">Save</button>
+              <button class="btn btn--ghost" type="button" hx-get="/meals/dishes"
+                      hx-target="#dishes-block" hx-swap="outerHTML">Cancel</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="4" class="dishes-none">No dishes yet — add your first one above.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card placeholder">
+  <span class="tile tile--meals">{{ icons.meals() }}</span>
+  <h2>No household yet</h2>
+  <p>Dishes belong to a household. Set up your family first, then your typical dishes will live here.</p>
+</div>
+{% endif %}
