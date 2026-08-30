@@ -45,9 +45,15 @@ def test_settings_renders_theme_picker():
 
 
 def test_section_renders_placeholder():
+    response = _client().get("/shopping")
+    assert response.status_code == 200
+    assert "Shopping is on its way" in response.text
+
+
+def test_meals_section_renders_week_view():
     response = _client().get("/meals")
     assert response.status_code == 200
-    assert "Meals is on its way" in response.text
+    assert "Meals is on its way" not in response.text
 
 
 def test_unknown_section_is_not_found():
