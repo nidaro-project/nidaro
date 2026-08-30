@@ -156,7 +156,9 @@ def test_week_page_renders_grid_with_dishes_and_planned_meal():
     )
     response = _client(_services(household, repo)).get("/meals")
     assert response.status_code == 200
-    expected_range = f"{today.strftime('%b %-d')} - {(today + timedelta(days=6)).strftime('%b %-d')}"
+    expected_range = (
+        f"{today.strftime('%b %-d')} - {(today + timedelta(days=6)).strftime('%b %-d')}"
+    )
     assert expected_range in response.text
     assert 'href="/meals/dishes"' in response.text
     assert 'hx-post="/meals/plan"' in response.text
@@ -175,7 +177,9 @@ def test_week_page_shifts_window_and_shows_today_reset():
     response = _client(_services(household, repo)).get("/meals", params={"w": 2})
     assert response.status_code == 200
     start = date.today() + timedelta(weeks=2)
-    expected_range = f"{start.strftime('%b %-d')} - {(start + timedelta(days=6)).strftime('%b %-d')}"
+    expected_range = (
+        f"{start.strftime('%b %-d')} - {(start + timedelta(days=6)).strftime('%b %-d')}"
+    )
     assert expected_range in response.text
     assert 'href="/meals?w=1"' in response.text
     assert 'href="/meals?w=3"' in response.text
@@ -254,9 +258,7 @@ def test_remove_action_calls_the_service():
     services = _services(household, repo)
     client = _client(services)
     today = date.today().isoformat()
-    client.post(
-        "/meals/plan", data={"w": "0", "on": today, "slot": "dinner", "name": "Soup"}
-    )
+    client.post("/meals/plan", data={"w": "0", "on": today, "slot": "dinner", "name": "Soup"})
     meal_id = repo.planned[0].id
     response = client.post(
         "/meals/planned/remove",
