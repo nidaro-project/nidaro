@@ -1,9 +1,16 @@
-from datetime import date, time
+from datetime import date, time, timedelta
 from uuid import uuid4
 
 from nidaro.calendar.recurrence import resolve_timezone
 from nidaro.household.models import FamilyMember, Household
-from nidaro.seed import build_seed_events, next_weekday
+from nidaro.meals.models import Dish
+from nidaro.seed import (
+    DISH_SEEDS,
+    WEEK_PLAN_SEEDS,
+    build_seed_events,
+    build_seed_meals,
+    next_weekday,
+)
 
 TODAY = date(2030, 6, 3)  # a Monday
 
@@ -127,3 +134,80 @@ def test_unknown_timezone_still_builds_deterministic_seeds():
     starts_at = volleyball.starts_at
     assert starts_at is not None
     assert starts_at.tzinfo == resolve_timezone(None)
+
+
+# ---- meals seeds ----
+
+
+def make_dishes(**renamed):
+    """Dish rows for every DISH_SEEDS name, keyed by seed name. A rename maps
+    the seed name to a dish row whose .name differs (renamed since seeding)."""
+    household_id = uuid4()
+    dishes = {}
+    for seed in DISH_SEEDS:
+        name = renamed.get(seed.name, seed.name)
+        dishes[seed.name] = Dish(id=uuid4(), household_id=household_id, name=name)
+    return dishes
+
+
+def meal_by_name(seeds, name):
+    return next((seed for seed in seeds if seed.name == name), None)
+
+
+def test_dish_seeds_are_the_household_rotation():
+    assert [seed.name for seed in DISH_SEEDS] == [
+        "Spaghetti Bolognese",
+        "Pancakes",
+        "Chili con Carne",
+        "Sunday Roast Chicken",
+        "Lentil Curry",
+        "Sushi Night",
+    ]
+    for seed in DISH_SEEDS:
+        assert seed.notes
+        assert seed.tags
+
+
+def test_seed_week_plan_is_partly_planned_and_mixed():
+    meals = build_seed_meals(make_dishes(), TODAY)
+    assert len(meals) == len(WEEK_PLAN_SEEDS) == 5
+    assert len({meal.on for meal in meals}) == 4  # five meals over four days
+    one_offs = [meal for meal in meals if meal.dish_id is None]
+    assert [meal.name for meal in one_offs] == ["Pizza for the guests"]
+    dish_backed = [meal for meal in meals if meal.dish_id is not None]
+    assert {meal.name for meal in dish_backed} <= {seed.name for seed in DISH_SEEDS}
+
+
+def test_seed_week_plan_stays_inside_the_coming_week():
+    for meal in build_seed_meals(make_dishes(), TODAY):
+        assert timedelta(0) <= meal.on - TODAY <= timedelta(days=6)
+
+
+def test_dish_backed_meals_snapshot_the_dish_name():
+    dishes = make_dishes(**{"Sushi Night": "Sushi Friday"})  # renamed after seeding
+    meals = build_seed_meals(dishes, TODAY)
+    sushi = meal_by_name(meals, "Sushi Friday")
+    assert sushi is not None
+    assert sushi.dish_id == dishes["Sushi Night"].id  # plan carries the new name…
+    assert meal_by_name(meals, "Sushi Night") is None  # …never the seed-time one
+
+
+def test_renamed_dish_leaves_its_seed_cell_unplanned():
+    dishes = make_dishes(**{"Sushi Night": "Sushi Friday"})
+    dishes.pop("Sushi Night")  # lookup is by seed-time name; the rename broke it
+    meals = build_seed_meals(dishes, TODAY)
+    assert "Sushi Friday" not in [meal.name for meal in meals]
+    assert len(meals) == len(WEEK_PLAN_SEEDS) - 1
+
+
+def test_seed_meal_slots_and_offsets_are_deterministic():
+    meals = build_seed_meals(make_dishes(), TODAY)
+    spaghetti = meal_by_name(meals, "Spaghetti Bolognese")
+    assert spaghetti is not None
+    assert (spaghetti.on, spaghetti.slot) == (TODAY, "dinner")
+    pancakes = meal_by_name(meals, "Pancakes")
+    chili = meal_by_name(meals, "Chili con Carne")
+    assert pancakes is not None
+    assert chili is not None
+    assert (pancakes.on, pancakes.slot) == (TODAY + timedelta(days=1), "breakfast")
+    assert meals.index(pancakes) < meals.index(chili)
