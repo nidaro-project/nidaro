@@ -1,0 +1,27 @@
+{# Month wall: classic grid, Monday start. The whole cell links to that day. #}
+<div class="cal-scroll">
+  <div class="cal-month">
+    <div class="cal-month__weekdays" aria-hidden="true">
+      {% for day in weeks[0] %}<span class="cal-month__weekday">{{ day.weekday }}</span>{% endfor %}
+    </div>
+    {% for week in weeks %}
+    <div class="cal-month__row">
+      {% for day in week %}
+      <a class="cal-cell{% if day.is_today %} cal-cell--today{% endif %}{% if not day.in_month %} cal-cell--dim{% endif %}"
+         href="/calendar?view=day&o={{ day.offset }}" aria-label="{{ day.day_long }}">
+        <span class="cal-cell__num">{{ day.day_num }}</span>
+        {% for item in day.allday %}<span class="cal-chip cal-chip--band">{{ item.title }}</span>{% endfor %}
+        {% for item in day.timed[:3] %}
+        <span class="cal-chip">
+          <span class="cal-chip__time">{{ item.time_short }}</span>
+          <span class="cal-chip__title">{{ item.title }}</span>
+          {%- if item.initials %} <span class="cal-chip__who">({{ item.initials }})</span>{% endif %}
+        </span>
+        {% endfor %}
+        {% if day.more %}<span class="cal-cell__more">+{{ day.more }} more</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>

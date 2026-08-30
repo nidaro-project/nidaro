@@ -1,0 +1,23 @@
+{# One agenda day section, shared by the week and day views. #}
+<section class="cal-daysect{% if day.is_today %} cal-daysect--today{% endif %}">
+  <h3 class="cal-daysect__head">{% if day.is_today %}Today · {% endif %}{{ day.day_long }}</h3>
+  {% for item in day.rows %}
+  <div class="cal-row">
+    {% if item.allday %}
+    <span class="cal-alldaychip">All day</span>
+    {% else %}
+    <span class="cal-row__time">{{ item.time_long }}</span>
+    {% endif %}
+    <span class="cal-row__title">{{ item.title }}{% if item.repeat %} <span class="cal-repeat" title="Repeats weekly">↻</span>{% endif %}</span>
+    <span class="cal-row__meta">
+      {%- if item.names %}
+      <span class="avatar-stack">{% for index in item.avatars %}<span class="avatar avatar--{{ index }}"></span>{% endfor %}</span>
+      <span>{{ item.names }}</span>
+      {%- endif %}
+      {%- if item.location %}<span class="cal-row__loc">{{ item.location }}</span>{% endif %}
+    </span>
+  </div>
+  {% else %}
+  <p class="cal-empty">Nothing planned.</p>
+  {% endfor %}
+</section>
