@@ -1,7 +1,8 @@
 from datetime import date
+from typing import Protocol
 from uuid import UUID
 
-from nidaro.meals.repository import MealsRepository
+from nidaro.meals.models import Dish, PlannedMeal
 from nidaro.meals.schemas import (
     CreateDishRequest,
     DishView,
@@ -11,8 +12,28 @@ from nidaro.meals.schemas import (
 )
 
 
+class MealsRepositoryProtocol(Protocol):
+    async def dishes(self, household_id: UUID) -> list[Dish]: ...
+
+    async def create_dish(self, request: CreateDishRequest) -> Dish: ...
+
+    async def get_dish(self, dish_id: UUID) -> Dish | None: ...
+
+    async def update_dish(self, dish_id: UUID, request: UpdateDishRequest) -> Dish | None: ...
+
+    async def delete_dish(self, dish_id: UUID) -> bool: ...
+
+    async def planned_between(
+        self, household_id: UUID, start: date, end: date
+    ) -> list[PlannedMeal]: ...
+
+    async def create_planned(self, request: PlanMealRequest, name: str) -> PlannedMeal: ...
+
+    async def delete_planned(self, meal_id: UUID) -> bool: ...
+
+
 class MealsService:
-    def __init__(self, repository: MealsRepository) -> None:
+    def __init__(self, repository: MealsRepositoryProtocol) -> None:
         self.repository = repository
 
     async def list_dishes(self, household_id: UUID) -> list[DishView]:

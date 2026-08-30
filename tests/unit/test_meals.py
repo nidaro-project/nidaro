@@ -3,15 +3,17 @@ from uuid import uuid4
 
 import pytest
 
-from nidaro.meals.repository import MealsRepository
 from nidaro.meals.schemas import CreateDishRequest, PlanMealRequest, UpdateDishRequest
 from nidaro.meals.service import MealsService
 
 
-class FakeMealsRepository(MealsRepository):
+class FakeMealsRepository:
     def __init__(self):
-        self.dishes = {}
+        self.dishes_by_id = {}
         self.planned = []
+
+    async def dishes(self, household_id):
+        return [d for d in self.dishes_by_id.values() if d.household_id == household_id]
 
     async def create_dish(self, request):
         from nidaro.db.types import new_uuid, utc_now
@@ -26,11 +28,11 @@ class FakeMealsRepository(MealsRepository):
             created_at=utc_now(),
             updated_at=utc_now(),
         )
-        self.dishes[dish.id] = dish
+        self.dishes_by_id[dish.id] = dish
         return dish
 
     async def get_dish(self, dish_id):
-        return self.dishes.get(dish_id)
+        return self.dishes_by_id.get(dish_id)
 
     async def create_planned(self, request, name):
         from nidaro.db.types import new_uuid, utc_now
@@ -66,7 +68,7 @@ class FakeMealsRepository(MealsRepository):
         return True
 
     async def update_dish(self, dish_id, request):
-        dish = self.dishes.get(dish_id)
+        dish = self.dishes_by_id.get(dish_id)
         if dish is None:
             return None
         for field, value in request.model_dump().items():
@@ -74,7 +76,7 @@ class FakeMealsRepository(MealsRepository):
         return dish
 
     async def delete_dish(self, dish_id):
-        return self.dishes.pop(dish_id, None) is not None
+        return self.dishes_by_id.pop(dish_id, None) is not None
 
 
 @pytest.mark.anyio
