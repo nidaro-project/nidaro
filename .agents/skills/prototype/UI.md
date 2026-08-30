@@ -91,11 +91,21 @@ Behaviour:
 
 Put the switcher in a single shared component so both sub-shapes can reuse it. Locate it wherever shared UI lives in the project.
 
-### 5. Hand it over
+### 5. Run it and judge it yourself
+
+Before handing over, drive every variant end to end yourself — the user should confirm a working page, not debug one.
+
+- Start the dev server on an explicit IPv4 host (`127.0.0.1`, not `localhost`: on dual-stack machines `localhost` can resolve to `::1` and curl reports `000` against a server that is up).
+- If you will keep editing, start with auto-reload — or plan to kill and restart after each edit. A server started without reload serves stale code and stale in-memory state; debugging that costs more than the restart.
+- Block on readiness inside one bash call (`until curl -fsS http://127.0.0.1:PORT/<route> >/dev/null; do sleep 1; done`) instead of a fixed sleep. A screenshot or POST fired before the server answers is a wasted round trip.
+- Smoke the flows with curl (form POSTs, fragment swaps), and judge rendering from screenshots via the chrome-agent CLI rather than trusting status codes.
+- Hand over with the server running only if the user should poke at it; otherwise stop the server and the headless browser before you finish.
+
+### 6. Hand it over
 
 Surface the URL (and the `?variant=` keys). The user will flip through whenever they get to it. The interesting feedback is usually **"I want the header from B with the sidebar from C"**, which is the actual design they want.
 
-### 6. Capture the answer and clean up
+### 7. Capture the answer and clean up
 
 Once a variant has won, capture the answer (which variant and why), then capture the prototype the way the [SKILL](SKILL.md) describes. Fold the winner into the real code and move the rest onto the throwaway branch, not into main:
 

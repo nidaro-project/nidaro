@@ -23,6 +23,11 @@ A **seam** is the public boundary you test at: the interface where you observe b
 
 Ask: "What's the public interface, and which seams should we test?"
 
+When the seam is already fixed upstream — an approved ticket, spec, or map
+decision states the interface — the seam counts as agreed: write it down,
+build to it, and record it in the resolution instead of re-opening the
+question with the user.
+
 When the shape of that interface is itself in question (how deep the module is, where the seam belongs, what the interface should expose), call the Skill tool with "codebase-design" for the vocabulary. It is the shared source of the module, interface, depth, seam, adapter, leverage and locality terms, and it is a reference to consult, not a session to run.
 
 ## Anti-patterns

@@ -31,3 +31,15 @@ _Avoid_: everyone event, family event (as a type)
 **Household timezone**:
 The timezone that defines a household's days — when its days, weeks, and occurrences begin and end.
 _Avoid_: server time, UTC (that is only the fallback)
+
+**Dish**:
+A reusable meal idea the household eats typically, configured once with a name, notes, and tags. A Dish is not tied to any date.
+_Avoid_: recipe, meal idea, template
+
+**Planned meal**:
+A Dish (or a one-off name) placed on a specific date and slot. A planned meal keeps the dish's name at planning time and is unaffected by later edits to or deletion of the Dish.
+_Avoid_: meal entry, calendar event
+
+**Slot**:
+One of the fixed eating times a day is planned in: breakfast, lunch, dinner, snacks. A slot may hold more than one planned meal.
+_Avoid_: mealtime, category
