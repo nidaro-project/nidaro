@@ -1,0 +1,34 @@
+{% import "components/icons.html" as icons %}
+{# One day x slot cell: its planned meals plus the inline add form. This is
+   also the HTMX fragment: /meals/plan and /meals/planned/remove swap the whole
+   cell (hx-swap="outerHTML"), which resets the add form for free. #}
+<div class="meals-cell a-{{ day.index }}-{{ slot }}{% if day.is_today %} meals-cell--today{% endif %}" id="meals-cell-{{ day.iso }}-{{ slot }}">
+  {% if day.entries[slot] %}<span class="meals-cell__slot">{{ slot }}</span>{% endif %}
+  {% for meal in day.entries[slot] %}
+  <span class="meals-chip{% if meal.dish_id is none %} meals-chip--oneoff{% endif %}">
+    <span class="meals-chip__name">{{ meal.name }}</span>
+    <form class="meals-xform" hx-post="/meals/planned/remove"
+          hx-target="#meals-cell-{{ day.iso }}-{{ slot }}" hx-swap="outerHTML">
+      <input type="hidden" name="w" value="{{ w }}">
+      <input type="hidden" name="on" value="{{ day.iso }}">
+      <input type="hidden" name="slot" value="{{ slot }}">
+      <input type="hidden" name="meal_id" value="{{ meal.id }}">
+      <button class="meals-x" aria-label="Remove {{ meal.name }}">✕</button>
+    </form>
+  </span>
+  {% endfor %}
+  <details class="meals-add">
+    <summary aria-label="Add {{ slot }} for {{ day.weekday }} {{ day.day_num }}">{{ icons.plus() }}</summary>
+    <form hx-post="/meals/plan" hx-target="#meals-cell-{{ day.iso }}-{{ slot }}" hx-swap="outerHTML">
+      <input type="hidden" name="w" value="{{ w }}">
+      <input type="hidden" name="on" value="{{ day.iso }}">
+      <input type="hidden" name="slot" value="{{ slot }}">
+      <select name="dish_id" aria-label="Pick a dish">
+        <option value="">One-off…</option>
+        {% for dish in dishes %}<option value="{{ dish.id }}">{{ dish.name }}</option>{% endfor %}
+      </select>
+      <input name="name" placeholder="or type a name" autocomplete="off" aria-label="One-off name">
+      <button class="btn btn--primary meals-addbtn">Add</button>
+    </form>
+  </details>
+</div>

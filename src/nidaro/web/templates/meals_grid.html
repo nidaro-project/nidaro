@@ -1,0 +1,20 @@
+{# Week grid: days as columns, slots as rows on wide screens. The same DOM
+   collapses to stacked day cards on narrow screens — layout lives entirely in
+   meals.css via grid-template-areas. #}
+<div class="meals-gridwrap">
+  <div class="meals-grid">
+    <div class="meals-corner" aria-hidden="true"></div>
+    {% for day in days %}
+    <div class="meals-dayhead a-h{{ day.index }}{% if day.is_today %} meals-dayhead--today{% endif %}">
+      <span class="meals-dayhead__day">{{ day.weekday }}</span>
+      <span class="meals-dayhead__num">{{ day.month }} {{ day.day_num }}</span>
+    </div>
+    {% endfor %}
+    {% for slot in slots %}
+    <div class="meals-slotname a-{{ slot }}">{{ slot | capitalize }}</div>
+    {% for day in days %}
+      {% include "meals_cell.html" %}
+    {% endfor %}
+    {% endfor %}
+  </div>
+</div>

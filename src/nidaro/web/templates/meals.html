@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "components/icons.html" as icons %}
+{% block title %}Meals · nidaro{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static/css/meals.css">
+
+{% if days is undefined %}
+<section class="card meals-empty">
+  <h2 class="meals-empty__title">No household yet</h2>
+  <p class="meals-empty__body">nidaro plans meals for a household. Create yours to start filling the week with dishes.</p>
+  <a class="btn btn--primary" href="/settings">Set up your household</a>
+</section>
+{% else %}
+<header class="meals-head">
+  <div class="meals-nav">
+    <a class="btn btn--ghost" href="/meals?w={{ prev_w }}" aria-label="Previous week">‹</a>
+    <h2 class="meals-range">{{ range_label }}</h2>
+    <a class="btn btn--ghost" href="/meals?w={{ next_w }}" aria-label="Next week">›</a>
+    {% if w != 0 %}<a class="btn btn--dashed" href="/meals?w=0">Today</a>{% endif %}
+  </div>
+  <div class="meals-head__spacer"></div>
+  <a class="btn btn--ghost" href="/meals/dishes">{{ icons.meals() }} Manage dishes</a>
+</header>
+{% include "meals_grid.html" %}
+{% endif %}
+{% endblock %}

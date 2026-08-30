@@ -1,0 +1,292 @@
+/* Meals week view — rolling 7-day planner. Semantic tokens only, per DESIGN.md.
+
+   One DOM serves two layouts: on wide screens the grid places days in columns
+   and slots in rows (grid-template-areas); below 66rem the same elements are
+   re-templated into stacked day cards — header row on top, its four slot cells
+   flush beneath it, one card per day. */
+
+.meals-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
+}
+
+.meals-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.meals-range {
+  margin: 0;
+  min-width: 9.5rem;
+  text-align: center;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.meals-head__spacer { flex: 1; }
+
+/* ---- wide: week grid ---- */
+
+.meals-gridwrap {
+  overflow-x: auto;
+  padding-bottom: var(--space-sm);
+}
+
+.meals-grid {
+  display: grid;
+  grid-template-columns: 4.75rem repeat(7, minmax(8.25rem, 1fr));
+  grid-template-areas:
+    "corner h0 h1 h2 h3 h4 h5 h6"
+    "breakfast d0-breakfast d1-breakfast d2-breakfast d3-breakfast d4-breakfast d5-breakfast d6-breakfast"
+    "lunch d0-lunch d1-lunch d2-lunch d3-lunch d4-lunch d5-lunch d6-lunch"
+    "dinner d0-dinner d1-dinner d2-dinner d3-dinner d4-dinner d5-dinner d6-dinner"
+    "snacks d0-snacks d1-snacks d2-snacks d3-snacks d4-snacks d5-snacks d6-snacks";
+  gap: var(--space-2xs);
+  min-width: 63.5rem;
+}
+
+.meals-corner { min-height: 1rem; }
+
+.meals-dayhead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2xs) 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text-2);
+}
+
+.meals-dayhead--today {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.meals-dayhead__day {
+  font-weight: 800;
+  font-size: var(--text-sm);
+}
+
+.meals-dayhead__num {
+  font-size: var(--text-xs);
+  opacity: 0.8;
+}
+
+.meals-slotname {
+  display: flex;
+  align-items: center;
+  padding-top: var(--space-xs);
+  color: var(--color-text-3);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---- cells and meal chips ---- */
+
+.meals-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-height: 4.5rem;
+  padding: var(--space-2xs);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+
+.meals-cell--today {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.meals-cell__slot { display: none; }
+
+.meals-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  max-width: 100%;
+  padding: 0.125rem 0.25rem 0.125rem var(--space-sm);
+  background: var(--cat-meals-bg);
+  color: var(--cat-meals-fg);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.meals-chip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meals-chip--oneoff {
+  background: var(--color-surface);
+  color: var(--color-text-2);
+  border: 1px dashed var(--color-line-strong);
+}
+
+.meals-xform {
+  display: inline-flex;
+  margin: 0;
+}
+
+.meals-x {
+  border: 0;
+  background: none;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  font-size: var(--text-xs);
+  line-height: 1;
+  padding: 0.125rem var(--space-2xs);
+}
+
+.meals-x:hover { opacity: 1; }
+
+/* ---- per-slot inline add ---- */
+
+.meals-add summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-xl);
+  height: var(--space-xl);
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-3);
+  cursor: pointer;
+  list-style: none;
+}
+
+.meals-add summary::-webkit-details-marker { display: none; }
+
+.meals-add summary svg {
+  width: var(--text-sm);
+  height: var(--text-sm);
+}
+
+.meals-add[open] summary { display: none; }
+
+.meals-add form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.meals-add select,
+.meals-add input {
+  min-width: 0;
+  padding: var(--space-2xs) var(--space-sm);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-xs);
+}
+
+.meals-addbtn {
+  font-size: var(--text-xs);
+  padding: var(--space-2xs) var(--space-md);
+}
+
+/* ---- narrow: same DOM as stacked day cards ---- */
+
+@media (max-width: 66rem) {
+  .meals-gridwrap {
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .meals-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "h0" "d0-breakfast" "d0-lunch" "d0-dinner" "d0-snacks"
+      "h1" "d1-breakfast" "d1-lunch" "d1-dinner" "d1-snacks"
+      "h2" "d2-breakfast" "d2-lunch" "d2-dinner" "d2-snacks"
+      "h3" "d3-breakfast" "d3-lunch" "d3-dinner" "d3-snacks"
+      "h4" "d4-breakfast" "d4-lunch" "d4-dinner" "d4-snacks"
+      "h5" "d5-breakfast" "d5-lunch" "d5-dinner" "d5-snacks"
+      "h6" "d6-breakfast" "d6-lunch" "d6-dinner" "d6-snacks";
+    gap: 0;
+    min-width: 0;
+  }
+
+  .meals-corner,
+  .meals-slotname { display: none; }
+
+  .meals-dayhead {
+    flex-direction: row;
+    justify-content: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-lg);
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid var(--color-line);
+    border-bottom: 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    background: var(--color-surface-2);
+  }
+
+  .meals-dayhead--today {
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+  }
+
+  .a-h0 { margin-top: 0; }
+
+  .meals-cell {
+    min-height: 0;
+    padding: var(--space-sm);
+    border-top: 0;
+    border-radius: 0;
+  }
+
+  .meals-cell__slot {
+    display: block;
+    color: var(--color-text-3);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .a-0-snacks,
+  .a-1-snacks,
+  .a-2-snacks,
+  .a-3-snacks,
+  .a-4-snacks,
+  .a-5-snacks,
+  .a-6-snacks {
+    border-bottom: 1px solid var(--color-line);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+  }
+}
+
+/* ---- no household yet ---- */
+
+.meals-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+  max-width: 26rem;
+  padding: var(--space-2xl);
+}
+
+.meals-empty__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  color: var(--color-text);
+}
+
+.meals-empty__body {
+  margin: 0;
+  color: var(--color-text-2);
+}
