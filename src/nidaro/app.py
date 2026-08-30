@@ -1,13 +1,14 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from redis.asyncio import Redis
 
 from nidaro.assistant.runtime import AssistantRuntime
 from nidaro.config import get_settings
 from nidaro.container import ApplicationServices
 from nidaro.db.engine import create_engine, create_session_factory
-from nidaro.web.routes import assistant, family, health
+from nidaro.web.routes import assistant, family, health, prototype, ui
 
 
 def create_app() -> FastAPI:
@@ -34,6 +35,9 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(family.router)
     app.include_router(assistant.router)
+    app.include_router(prototype.router)
+    app.include_router(ui.router)
+    app.mount("/static", StaticFiles(directory=ui.STATIC_DIR), name="static")
 
     if settings.logfire_token:
         import logfire
