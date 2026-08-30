@@ -32,7 +32,9 @@ def _household() -> Household:
     )
 
 
-def _dish(name="Chili con Carne", notes="Freezes well.", tags=("one-pot", "freezer")) -> Dish:
+def _dish(
+    name="Chili con Carne", notes: str | None = "Freezes well.", tags=("one-pot", "freezer")
+) -> Dish:
     return Dish(
         id=new_uuid(),
         household_id=HOUSEHOLD_ID,
@@ -121,6 +123,7 @@ def test_dishes_page_lists_name_tags_notes():
     assert dish.name in response.text
     for tag in dish.tags:
         assert f">{tag}</span>" in response.text
+    assert dish.notes is not None
     assert dish.notes in response.text
 
 
@@ -135,7 +138,7 @@ def test_dishes_page_has_no_editor_by_default():
 def test_dishes_page_opens_expanding_editor_on_edit():
     dish = _dish()
     client, _ = _client(dish)
-    response = client.get("/meals/dishes", params={"edit": dish.id})
+    response = client.get("/meals/dishes", params={"edit": str(dish.id)})
     assert response.status_code == 200
     assert 'class="dishes-edit-row"' in response.text
     editor = response.text[
@@ -151,7 +154,7 @@ def test_dishes_page_opens_expanding_editor_on_edit():
 def test_htmx_edit_request_gets_fragment_not_page():
     dish = _dish()
     client, _ = _client(dish)
-    response = client.get("/meals/dishes", params={"edit": dish.id}, headers=HX)
+    response = client.get("/meals/dishes", params={"edit": str(dish.id)}, headers=HX)
     assert response.status_code == 200
     assert "<html" not in response.text
     assert 'id="dishes-block"' in response.text
