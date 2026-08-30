@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class CreateEventRequest(BaseModel):
@@ -11,6 +11,16 @@ class CreateEventRequest(BaseModel):
     ends_at: datetime | None = None
     description: str | None = None
     location: str | None = None
+    is_all_day: bool = False
+    recurrence_weekdays: list[int] | None = None
+    participants: list[UUID] = []
+
+    @field_validator("recurrence_weekdays")
+    @classmethod
+    def check_weekdays(cls, value):
+        if value and any(day not in range(7) for day in value):
+            raise ValueError("recurrence_weekdays must contain integers 0..6 (0=Monday)")
+        return value
 
 
 class EventView(BaseModel):
@@ -24,6 +34,14 @@ class EventView(BaseModel):
     description: str | None
     location: str | None
     status: str
+    is_all_day: bool = False
+    recurrence_weekdays: list[int] | None = None
+    participants: list[UUID] = []
+
+    @field_validator("participants", mode="before")
+    @classmethod
+    def member_ids(cls, value):
+        return [getattr(member, "id", member) for member in value]
 
 
 class UpcomingEvents(BaseModel):
