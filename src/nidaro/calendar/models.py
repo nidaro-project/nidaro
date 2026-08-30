@@ -43,4 +43,6 @@ class Event(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(40), default="scheduled")
     source_id: Mapped[UUID | None] = mapped_column(ForeignKey("sources.id"), nullable=True)
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
+    is_all_day: Mapped[bool] = mapped_column(default=False)
+    recurrence_weekdays: Mapped[list[int] | None] = mapped_column(ARRAY(Integer), nullable=True)
     participants: Mapped[list[FamilyMember]] = relationship(secondary=event_participants)
