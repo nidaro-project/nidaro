@@ -19,6 +19,11 @@ from nidaro.web.routes.ui import _nav, templates
 
 router = APIRouter(prefix="/meals", include_in_schema=False)
 
+# Annotated dependency (no default-value call): same injection as
+# `services: ApplicationServices = Depends(get_services)`, but ruff-clean
+# without a suppression comment.
+Services = Annotated[ApplicationServices, Depends(get_services)]
+
 SLOTS: tuple[Slot, ...] = ("breakfast", "lunch", "dinner", "snacks")
 
 
@@ -95,8 +100,8 @@ async def _cell_fragment(
 @router.get("")
 async def week(
     request: Request,
+    services: Services,
     w: int = 0,
-    services: ApplicationServices = Depends(get_services),  # noqa: B008
 ):
     household = await services.household.get_household()
     if household is None:
@@ -123,12 +128,12 @@ async def week(
 @router.post("/plan")
 async def plan(
     request: Request,
+    services: Services,
     w: Annotated[int, Form()],
     on: Annotated[date, Form()],
     slot: Annotated[Slot, Form()],
     dish_id: Annotated[str, Form()] = "",
     name: Annotated[str, Form()] = "",
-    services: ApplicationServices = Depends(get_services),  # noqa: B008
 ):
     household, days = await _guard(services, w, on)
     clean = name.strip()
@@ -153,11 +158,11 @@ async def plan(
 @router.post("/planned/remove")
 async def remove(
     request: Request,
+    services: Services,
     w: Annotated[int, Form()],
     on: Annotated[date, Form()],
     slot: Annotated[Slot, Form()],
     meal_id: Annotated[UUID, Form()],
-    services: ApplicationServices = Depends(get_services),  # noqa: B008
 ):
     household, days = await _guard(services, w, on)
     await services.meals.remove_planned_meal(meal_id)
