@@ -1,0 +1,51 @@
+{# PROTOTYPE — variant B: warm card grid, edit-in-place on the card, add-card at the end. #}
+{% import "components/icons.html" as icons %}
+<div class="pd-cards" id="pd-cards">
+  {% for d in dishes %}
+  {% if edit == d.id %}
+  <form class="card pd-card pd-card--editing" hx-post="/prototype/dishes/save" hx-target="#pd-cards" hx-swap="outerHTML">
+    <input type="hidden" name="variant" value="{{ variant }}">
+    <input type="hidden" name="dish_id" value="{{ d.id }}">
+    <input class="pd-input" name="name" value="{{ d.name }}" autocomplete="off" required>
+    <input class="pd-input pd-input--small" name="tags" value="{{ d.tags | join(', ') }}" autocomplete="off">
+    <textarea class="pd-input pd-input--small pd-notes-input" name="notes" rows="3">{{ d.notes }}</textarea>
+    <div class="pd-card__foot">
+      <button class="btn btn--primary">Save</button>
+      <a class="pd-cancel" href="?variant={{ variant }}">Cancel</a>
+    </div>
+  </form>
+  {% else %}
+  <div class="card pd-card">
+    <div class="pd-card__head">
+      <span class="pd-card__name">{{ d.name }}</span>
+      <form class="pw-xform" hx-post="/prototype/dishes/delete" hx-target="#pd-cards" hx-swap="outerHTML"
+            hx-confirm="Delete “{{ d.name }}”? Planned meals keep their name.">
+        <input type="hidden" name="variant" value="{{ variant }}">
+        <input type="hidden" name="dish_id" value="{{ d.id }}">
+        <button class="pw-x" aria-label="Delete {{ d.name }}">✕</button>
+      </form>
+    </div>
+    {% if d.tags %}
+    <span class="pd-tags">
+      {% for t in d.tags %}<span class="pd-tag">{{ t }}</span>{% endfor %}
+    </span>
+    {% endif %}
+    {% if d.notes %}<p class="pd-card__notes">{{ d.notes }}</p>{% endif %}
+    <div class="pd-card__foot">
+      <a class="pd-act" href="?variant={{ variant }}&edit={{ d.id }}">{{ icons.gear() }} Edit</a>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  <details class="pd-card pd-card--new" {% if not dishes %}open{% endif %}>
+    <summary class="pd-newcard">{{ icons.plus() }} New dish</summary>
+    <form class="pd-form pd-form--stack" hx-post="/prototype/dishes/save" hx-target="#pd-cards" hx-swap="outerHTML">
+      <input type="hidden" name="variant" value="{{ variant }}">
+      <input class="pd-input" name="name" placeholder="Dish name" autocomplete="off" required>
+      <input class="pd-input pd-input--small" name="tags" placeholder="tags, comma, separated" autocomplete="off">
+      <textarea class="pd-input pd-input--small pd-notes-input" name="notes" rows="3" placeholder="Notes…"></textarea>
+      <button class="btn btn--primary">Save dish</button>
+    </form>
+  </details>
+</div>

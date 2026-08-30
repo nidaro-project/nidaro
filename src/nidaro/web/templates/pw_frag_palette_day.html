@@ -1,0 +1,52 @@
+{# PROTOTYPE — fragment: one palette day column. HTMX replaces it on place/remove. #}
+{% import "components/icons.html" as icons %}
+{% set picked_dish = dishes | selectattr('id', 'equalto', picked) | list | first %}
+<div class="pw-pday{% if day.is_today %} pw-pday--today{% endif %}" id="pw-pday-{{ day.iso }}">
+  <div class="pw-pday__head">
+    <span class="pw-pday__weekday">{{ day.weekday }}</span>
+    <span class="pw-pday__num">{{ day.month }} {{ day.day_num }}</span>
+  </div>
+  {% for slot in slots %}
+  <div class="pw-pday__slot">
+    <span class="pw-pday__slotname">{{ slot | capitalize }}</span>
+    {% for e in day.entries[slot] %}
+    <span class="pw-chip{% if not e.dish_id %} pw-chip--oneoff{% endif %}">
+      <span class="pw-chip__name">{{ e.name }}</span>
+      <form class="pw-xform" hx-post="/prototype/week-view/entries/delete"
+            hx-target="#pw-pday-{{ day.iso }}" hx-swap="outerHTML">
+        <input type="hidden" name="variant" value="palette">
+        <input type="hidden" name="w" value="{{ w }}">
+        <input type="hidden" name="on" value="{{ day.iso }}">
+        <input type="hidden" name="slot" value="{{ slot }}">
+        {% if picked %}<input type="hidden" name="picked" value="{{ picked }}">{% endif %}
+        <input type="hidden" name="entry_id" value="{{ e.id }}">
+        <button class="pw-x" aria-label="Remove {{ e.name }}">✕</button>
+      </form>
+    </span>
+    {% endfor %}
+    <form hx-post="/prototype/week-view/place"
+          hx-target="#pw-pday-{{ day.iso }}" hx-swap="outerHTML">
+      <input type="hidden" name="variant" value="palette">
+      <input type="hidden" name="w" value="{{ w }}">
+      <input type="hidden" name="on" value="{{ day.iso }}">
+      <input type="hidden" name="slot" value="{{ slot }}">
+      {% if picked %}<input type="hidden" name="picked" value="{{ picked }}">{% endif %}
+      <button class="pw-drop{% if not picked_dish %} pw-drop--idle{% endif %}">
+        {% if picked_dish %}+ {{ picked_dish.name }}{% else %}pick a dish →{% endif %}
+      </button>
+    </form>
+    <details class="pw-add pw-add--mini">
+      <summary>custom</summary>
+      <form class="pw-inlineform" hx-post="/prototype/week-view/entries"
+            hx-target="#pw-pday-{{ day.iso }}" hx-swap="outerHTML">
+        <input type="hidden" name="variant" value="palette">
+        <input type="hidden" name="w" value="{{ w }}">
+        <input type="hidden" name="on" value="{{ day.iso }}">
+        <input type="hidden" name="slot" value="{{ slot }}">
+        <input name="name" placeholder="one-off name" autocomplete="off">
+        <button class="btn btn--primary pw-addbtn">Add</button>
+      </form>
+    </details>
+  </div>
+  {% endfor %}
+</div>

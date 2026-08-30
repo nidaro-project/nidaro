@@ -1,0 +1,205 @@
+/* Nidaro design tokens — single source of truth. See DESIGN.md. */
+
+/* ---------------------------------- primitives --------------------------------- */
+
+:root {
+  /* sand — warm paper neutrals */
+  --sand-50: #faf7f1;
+  --sand-100: #f3eee3;
+  --sand-200: #eae3d3;
+  --sand-300: #dad0ba;
+
+  /* leaf — brand green */
+  --leaf-50: #f1f6ec;
+  --leaf-100: #e1edd8;
+  --leaf-200: #c6dcb8;
+  --leaf-300: #9dc28d;
+  --leaf-400: #71a663;
+  --leaf-500: #4f8a47;
+  --leaf-600: #3e7539;
+  --leaf-700: #2f5c2f;
+  --leaf-800: #274b2a;
+  --leaf-900: #1e3b23;
+
+  /* clay — terracotta */
+  --clay-100: #fae4dc;
+  --clay-400: #e08a64;
+  --clay-500: #d96c4f;
+  --clay-600: #be5a3f;
+
+  /* supporting hues */
+  --blue-100: #eaedfb;
+  --blue-500: #5b67c7;
+  --blue-600: #4c57b2;
+  --violet-100: #f0eafb;
+  --violet-500: #7c5cc9;
+  --amber-100: #fbf0dc;
+  --amber-500: #d98e2b;
+  --amber-600: #b87417;
+  --rose-500: #c4453b;
+  --rose-100: #f9e4e1;
+}
+
+/* ------------------------------ semantic: daylight ----------------------------- */
+
+:root,
+[data-theme="daylight"] {
+  --color-bg: var(--sand-50);
+  --color-surface: #ffffff;
+  --color-surface-2: var(--sand-100);
+
+  --color-text: #253020;
+  --color-text-2: #5b6452;
+  --color-text-3: #8c937f;
+
+  --color-line: #e8e1d0;
+  --color-line-strong: #d8cdb4;
+
+  --color-accent: var(--leaf-700);
+  --color-accent-strong: var(--leaf-800);
+  --color-accent-text: var(--leaf-600);
+  --color-accent-soft: var(--leaf-100);
+  --color-on-accent-soft: var(--leaf-900);
+  --color-accent-contrast: #ffffff;
+
+  --color-success: var(--leaf-600);
+  --color-danger: var(--rose-500);
+  --color-danger-soft: var(--rose-100);
+  --color-warn: var(--amber-600);
+
+  /* categories: fg over bg */
+  --cat-calendar-fg: var(--blue-500);
+  --cat-calendar-bg: var(--blue-100);
+  --cat-meals-fg: var(--amber-600);
+  --cat-meals-bg: var(--amber-100);
+  --cat-shopping-fg: var(--clay-600);
+  --cat-shopping-bg: var(--clay-100);
+  --cat-school-fg: var(--violet-500);
+  --cat-school-bg: var(--violet-100);
+  --cat-family-fg: var(--leaf-600);
+  --cat-family-bg: var(--leaf-100);
+  --cat-notes-fg: #6e5fb0;
+  --cat-notes-bg: #edeaf8;
+  --cat-deals-fg: var(--clay-600);
+  --cat-deals-bg: var(--clay-100);
+
+  --focus-ring: 0 0 0 3px rgb(47 92 47 / 25%);
+  --shadow-card: 0 1px 2px rgb(37 48 32 / 4%), 0 12px 32px -20px rgb(37 48 32 / 14%);
+  --shadow-pop: 0 4px 6px rgb(37 48 32 / 6%), 0 16px 40px -16px rgb(37 48 32 / 22%);
+}
+
+/* -------------------------------- semantic: meadow ----------------------------- */
+
+[data-theme="meadow"] {
+  --color-bg: #edf3e4;
+  --color-surface: #fbfdf7;
+  --color-surface-2: #e2ebd5;
+
+  --color-text: #23301e;
+  --color-text-2: #54644b;
+  --color-text-3: #7e8d70;
+
+  --color-line: #d7e2c6;
+  --color-line-strong: #c2d2ad;
+
+  --color-accent: var(--leaf-600);
+  --color-accent-strong: #33632f;
+  --color-accent-text: #33632f;
+  --color-accent-soft: #dcebd0;
+  --color-on-accent-soft: var(--leaf-900);
+
+  --cat-calendar-bg: #e4eaf8;
+  --cat-meals-bg: #f5ebd2;
+  --cat-shopping-bg: #f2e2d2;
+  --cat-school-bg: #eae3f8;
+  --cat-family-bg: #dcebd0;
+  --cat-notes-bg: #e7e2f6;
+  --cat-deals-bg: #f2e2d2;
+
+  --focus-ring: 0 0 0 3px rgb(62 117 57 / 28%);
+  --shadow-card: 0 1px 2px rgb(35 48 30 / 5%), 0 12px 32px -20px rgb(35 48 30 / 16%);
+  --shadow-pop: 0 4px 6px rgb(35 48 30 / 7%), 0 16px 40px -16px rgb(35 48 30 / 24%);
+}
+
+/* --------------------------------- semantic: dusk ------------------------------ */
+
+[data-theme="dusk"] {
+  --color-bg: #151a14;
+  --color-surface: #1d231c;
+  --color-surface-2: #272e25;
+
+  --color-text: #e7ece1;
+  --color-text-2: #a9b3a1;
+  --color-text-3: #7b856f;
+
+  --color-line: #2c3429;
+  --color-line-strong: #3c4637;
+
+  --color-accent: #8fc08b;
+  --color-accent-strong: #9fcd9b;
+  --color-accent-text: #a5d49b;
+  --color-accent-soft: #273b27;
+  --color-on-accent-soft: #d5e9cc;
+  --color-accent-contrast: #14250f;
+
+  --color-success: #9cc890;
+  --color-danger: #e08a80;
+  --color-danger-soft: #472a26;
+  --color-warn: #e0a95c;
+
+  --cat-calendar-fg: #abb3e8;
+  --cat-calendar-bg: #2a2f4a;
+  --cat-meals-fg: #e6b678;
+  --cat-meals-bg: #3b2f1a;
+  --cat-shopping-fg: #e29679;
+  --cat-shopping-bg: #402620;
+  --cat-school-fg: #b9a3e6;
+  --cat-school-bg: #2f2749;
+  --cat-family-fg: #9ccb8d;
+  --cat-family-bg: #26381f;
+  --cat-notes-fg: #b4a8de;
+  --cat-notes-bg: #2d2849;
+  --cat-deals-fg: #e29679;
+  --cat-deals-bg: #402620;
+
+  --focus-ring: 0 0 0 3px rgb(143 192 139 / 30%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 30%), 0 12px 32px -20px rgb(0 0 0 / 55%);
+  --shadow-pop: 0 4px 6px rgb(0 0 0 / 35%), 0 16px 40px -16px rgb(0 0 0 / 65%);
+}
+
+/* ------------------------------ non-color tokens ------------------------------- */
+
+:root {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+
+  --text-xs: 0.6875rem;   /* 11px */
+  --text-sm: 0.75rem;     /* 12px */
+  --text-base: 0.8125rem; /* 13px */
+  --text-md: 0.875rem;    /* 14px */
+  --text-lg: 1rem;        /* 16px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.625rem;   /* 26px */
+
+  --leading-tight: 1.2;
+  --leading-body: 1.45;
+
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 40px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  --dur-fast: 120ms;
+  --dur-med: 220ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+}

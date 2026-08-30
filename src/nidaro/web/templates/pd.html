@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% import "components/icons.html" as icons %}
+{# PROTOTYPE — throwaway dish-configuration exploration for [mealplan-2]. Delete before merge. #}
+{% block title %}Dishes prototype · nidaro{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static/css/pd.css">
+<div class="pw-banner">
+  <span class="badge">PROTOTYPE</span> throwaway dish-configuration exploration — choices recorded on
+  <strong>[mealplan-2]</strong>, nothing here persists.
+</div>
+
+<header class="pw-head">
+  <h2 class="pw-range">Typical dishes</h2>
+  <div class="pw-head__spacer"></div>
+  <span class="pw-head__hint">{{ variant_label }}</span>
+</header>
+
+{% if variant == 'table' %}
+  {% include 'pd_table.html' %}
+{% elif variant == 'cards' %}
+  {% include 'pd_cards.html' %}
+{% else %}
+  {% include 'pd_detail.html' %}
+{% endif %}
+
+<nav class="pw-switcher" aria-label="Prototype variants">
+  {% set idx = variant_keys.index(variant) %}
+  <a class="pw-switcher__arrow" data-pw-step="prev" href="?variant={{ variant_keys[(idx - 1) % variant_keys | length] }}">←</a>
+  <span class="pw-switcher__label">{{ variant_label }}</span>
+  <a class="pw-switcher__arrow" data-pw-step="next" href="?variant={{ variant_keys[(idx + 1) % variant_keys | length] }}">→</a>
+</nav>
+<script>
+  document.addEventListener('keydown', function (e) {
+    if (e.target.closest('input,textarea,select,[contenteditable]')) return;
+    var prev = document.querySelector('[data-pw-step="prev"]');
+    var next = document.querySelector('[data-pw-step="next"]');
+    if (e.key === 'ArrowLeft' && prev) prev.click();
+    if (e.key === 'ArrowRight' && next) next.click();
+  });
+</script>
+{% endblock %}

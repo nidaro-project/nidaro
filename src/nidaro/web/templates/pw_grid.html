@@ -1,0 +1,18 @@
+{# PROTOTYPE — variant A: everything at once, days as columns, slots as rows. #}
+<div class="pw-gridwrap">
+  <div class="pw-grid">
+    <div class="pw-corner"></div>
+    {% for day in days %}
+    <div class="pw-grid-head{% if day.is_today %} pw-today{% endif %}">
+      <span class="pw-grid-head__day">{{ day.weekday }}</span>
+      <span class="pw-grid-head__num">{{ day.month }} {{ day.day_num }}</span>
+    </div>
+    {% endfor %}
+    {% for slot in slots %}
+    <div class="pw-slotname">{{ slot | capitalize }}</div>
+    {% for day in days %}
+      {% include 'pw_frag_grid_slot.html' %}
+    {% endfor %}
+    {% endfor %}
+  </div>
+</div>

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% import "components/icons.html" as icons %}
+{% block title %}{{ label }} · nidaro{% endblock %}
+{% block content %}
+<section class="card placeholder">
+  <span class="tile tile--{{ tile }}">{{ icons.icon(icon) }}</span>
+  <h2>{{ label }} is on its way</h2>
+  <p>The shell is in place. This section lights up as we plug in its data, tools, and jobs — one integration at a time.</p>
+  <a class="link-more" href="/">Back to home {{ icons.arrow_right() }}</a>
+</section>
+{% endblock %}

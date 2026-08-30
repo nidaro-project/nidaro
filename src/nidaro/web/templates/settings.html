@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "components/icons.html" as icons %}
+{% block title %}Settings · nidaro{% endblock %}
+{% block content %}
+<div class="greeting">
+  <div>
+    <h1>Settings</h1>
+    <p class="greeting__sub">Make nidaro feel like home.</p>
+  </div>
+</div>
+
+<section class="card settings-section">
+  <div class="card__head">
+    <div class="card__title">{{ icons.sparkle() }} Appearance</div>
+  </div>
+  <div class="card__body">
+    <p>Pick the mood that fits your family. Your choice applies instantly and is remembered on this device. Per-account themes arrive together with user accounts.</p>
+    <div class="theme-grid">
+      {% for theme in themes %}
+      <button class="theme-choice" data-theme-choice="{{ theme.id }}" aria-pressed="{{ 'true' if theme.active else 'false' }}">
+        <span class="theme-swatch theme-swatch--{{ theme.id }}"><i></i><i></i><i></i></span>
+        <span class="theme-choice__name">{{ theme.name }} <span class="badge">Active</span></span>
+        <span class="theme-choice__desc">{{ theme.description }}</span>
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="card settings-section">
+  <div class="card__head">
+    <div class="card__title">{{ icons.gear() }} More settings</div>
+  </div>
+  <div class="card__body">
+    <div class="settings-soon">{{ icons.family() }} Household &amp; members — arrives with the family integration.</div>
+    <hr class="divider">
+    <div class="settings-soon">{{ icons.bell() }} Notifications — arrives with the assistant integration.</div>
+    <hr class="divider">
+    <div class="settings-soon">{{ icons.deals() }} Shopping preferences — arrives with the deals integration.</div>
+  </div>
+</section>
+{% endblock %}

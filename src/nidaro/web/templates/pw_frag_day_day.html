@@ -1,0 +1,60 @@
+{# PROTOTYPE — fragment: one day card. HTMX replaces it on add/remove. #}
+{% import "components/icons.html" as icons %}
+{% set planned = [] %}
+{% for slot in slots %}{% for e in day.entries[slot] %}{% if planned.append(e) %}{% endif %}{% endfor %}{% endfor %}
+<details class="card pw-daycard{% if day.is_today %} pw-daycard--today{% endif %}" id="pw-day-{{ day.iso }}" {% if day.is_today %}open{% endif %}>
+  <summary class="pw-daycard__summary">
+    <span class="pw-daycard__date{% if day.is_today %} pw-daycard__date--today{% endif %}">
+      <span class="pw-daycard__weekday">{{ day.weekday }}</span>
+      <span class="pw-daycard__num">{{ day.month }} {{ day.day_num }}</span>
+    </span>
+    <span class="pw-daycard__peek">
+      {% if planned %}
+        {% for e in planned[:2] %}<span class="pw-chip{% if not e.dish_id %} pw-chip--oneoff{% endif %}">{{ e.name }}</span>{% endfor %}
+        {% if planned | length > 2 %}<span class="pw-daycard__more">+{{ planned | length - 2 }} more</span>{% endif %}
+      {% else %}
+        <span class="pw-daycard__empty">nothing planned</span>
+      {% endif %}
+    </span>
+    <span class="pw-daycard__chevron">{{ icons.chevron_down() }}</span>
+  </summary>
+  <div class="pw-daycard__body">
+    {% for slot in slots %}
+    <div class="pw-slotrow">
+      <span class="pw-slotrow__name">{{ slot | capitalize }}</span>
+      <div class="pw-slotrow__items" id="pw-slotitems-{{ day.iso }}-{{ slot }}">
+        {% for e in day.entries[slot] %}
+        <span class="pw-chip{% if not e.dish_id %} pw-chip--oneoff{% endif %}">
+          <span class="pw-chip__name">{{ e.name }}</span>
+          <form class="pw-xform" hx-post="/prototype/week-view/entries/delete"
+                hx-target="#pw-day-{{ day.iso }}" hx-swap="outerHTML">
+            <input type="hidden" name="variant" value="{{ variant }}">
+            <input type="hidden" name="w" value="{{ w }}">
+            <input type="hidden" name="on" value="{{ day.iso }}">
+            <input type="hidden" name="slot" value="{{ slot }}">
+            <input type="hidden" name="entry_id" value="{{ e.id }}">
+            <button class="pw-x" aria-label="Remove {{ e.name }}">✕</button>
+          </form>
+        </span>
+        {% endfor %}
+        <details class="pw-add pw-add--inline">
+          <summary aria-label="Add {{ slot }}">{{ icons.plus() }}</summary>
+          <form class="pw-inlineform" hx-post="/prototype/week-view/entries"
+                hx-target="#pw-day-{{ day.iso }}" hx-swap="outerHTML">
+            <input type="hidden" name="variant" value="{{ variant }}">
+            <input type="hidden" name="w" value="{{ w }}">
+            <input type="hidden" name="on" value="{{ day.iso }}">
+            <input type="hidden" name="slot" value="{{ slot }}">
+            <select name="dish_id">
+              <option value="">One-off…</option>
+              {% for d in dishes %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}
+            </select>
+            <input name="name" placeholder="or type a name" autocomplete="off">
+            <button class="btn btn--primary pw-addbtn">Add</button>
+          </form>
+        </details>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</details>

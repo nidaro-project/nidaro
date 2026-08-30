@@ -1,0 +1,56 @@
+{# PROTOTYPE — variant A: dense table rows, edit-in-place, one add-form on top. #}
+{% import "components/icons.html" as icons %}
+<div class="pd-block">
+  <details class="pd-new">
+    <summary class="btn btn--primary">{{ icons.plus() }} Add a dish</summary>
+    <form class="pd-form" hx-post="/prototype/dishes/save" hx-target="#pd-table-body" hx-swap="outerHTML">
+      <input type="hidden" name="variant" value="{{ variant }}">
+      <input name="name" placeholder="Dish name" autocomplete="off" required>
+      <input name="tags" placeholder="tags, comma, separated" autocomplete="off">
+      <input name="notes" placeholder="Notes — sides, who likes it, quirks…" autocomplete="off">
+      <button class="btn btn--primary">Save dish</button>
+    </form>
+  </details>
+
+  <table class="pd-table">
+    <thead>
+      <tr><th>Dish</th><th>Tags</th><th class="pd-col-notes">Notes</th><th></th></tr>
+    </thead>
+    <tbody id="pd-table-body">
+      {% for d in dishes %}
+      <tr id="pd-row-{{ d.id }}">
+        {% if edit == d.id %}
+        <td colspan="4">
+          <form class="pd-form pd-form--row" hx-post="/prototype/dishes/save" hx-target="#pd-table-body" hx-swap="outerHTML">
+            <input type="hidden" name="variant" value="{{ variant }}">
+            <input type="hidden" name="dish_id" value="{{ d.id }}">
+            <input name="name" value="{{ d.name }}" autocomplete="off" required>
+            <input name="tags" value="{{ d.tags | join(', ') }}" autocomplete="off">
+            <input name="notes" value="{{ d.notes }}" autocomplete="off">
+            <button class="btn btn--primary">Save</button>
+            <a class="pd-cancel" href="?variant={{ variant }}">Cancel</a>
+          </form>
+        </td>
+        {% else %}
+        <td class="pd-cell-name">{{ d.name }}</td>
+        <td>
+          <span class="pd-tags">
+            {% for t in d.tags %}<span class="pd-tag">{{ t }}</span>{% endfor %}
+          </span>
+        </td>
+        <td class="pd-col-notes pd-cell-notes">{{ d.notes }}</td>
+        <td class="pd-cell-actions">
+          <a class="pd-act" href="?variant={{ variant }}&edit={{ d.id }}">Edit</a>
+          <form class="pw-xform" hx-post="/prototype/dishes/delete" hx-target="#pd-table-body" hx-swap="outerHTML"
+                hx-confirm="Delete “{{ d.name }}”? Planned meals keep their name.">
+            <input type="hidden" name="variant" value="{{ variant }}">
+            <input type="hidden" name="dish_id" value="{{ d.id }}">
+            <button class="pd-act pd-act--danger">Delete</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

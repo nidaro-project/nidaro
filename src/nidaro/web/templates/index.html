@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% import "components/icons.html" as icons %}
+{% block title %}Home · nidaro{% endblock %}
+{% block content %}
+<div class="greeting">
+  <div>
+    <h1>{{ greeting_title }} ☀️</h1>
+    <p class="greeting__sub">{{ greeting_sub }}</p>
+  </div>
+  <div class="greeting__meta">
+    <span>{{ weather }}</span>
+    <span class="divider-v"></span>
+    <span>{{ today }}</span>
+  </div>
+</div>
+
+<div class="row row--top">
+  <section class="card">
+    <div class="card__head">
+      <div class="card__title">{{ icons.sparkle() }} nidaro Assistant <span class="badge">AI</span></div>
+    </div>
+    <div class="card__body">
+      <div class="assistant__grid">
+        {% for item in assistant %}
+        <article class="assistant__item">
+          <span class="tile tile--{{ item.tile }}">{{ icons.icon(item.icon) }}</span>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.body }}</p>
+          <a class="link-more" href="{{ item.href }}">{{ item.link }} {{ icons.arrow_right() }}</a>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <div class="stats">
+    {% for stat in stats %}
+    <section class="card stat">
+      <span class="tile tile--sm tile--{{ stat.tile }}">{{ icons.icon(stat.icon) }}</span>
+      <div>
+        <div class="stat__num">{{ stat.value }}</div>
+        <div class="stat__label">{{ stat.label }}</div>
+        <div class="stat__sub">{{ stat.sub }}</div>
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="row row--mid">
+  <section class="card">
+    <div class="card__head">
+      <div class="card__title">{{ icons.calendar() }} This Week's Family Calendar</div>
+      <a class="link-more" href="/calendar">View calendar {{ icons.arrow_right() }}</a>
+    </div>
+    <div class="card__body">
+      {% for event in events %}
+      <div class="cal-row">
+        <div>
+          <div class="cal-row__day">{{ event.day }}</div>
+          <div class="cal-row__date">{{ event.date }}</div>
+        </div>
+        <div class="cal-row__time"><span class="dot dot--{{ event.category }}"></span>{{ event.time }}</div>
+        <div class="cal-row__what">{{ event.what }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__head">
+      <div class="card__title">{{ icons.meals() }} Meal Plan</div>
+      <a class="link-more" href="/meals">View meal plan {{ icons.arrow_right() }}</a>
+    </div>
+    <div class="card__body">
+      {% for meal in meals %}
+      <div class="meal-row">
+        <span class="meal-row__day">{{ meal.day }}</span>
+        {% if meal.photo is not none %}
+        <span class="meal-thumb meal-thumb--{{ meal.photo }}"></span>
+        {% else %}
+        <span class="tag">Leftovers</span>
+        {% endif %}
+        <div>
+          <div class="meal-row__title">{{ meal.title }}</div>
+          <div class="meal-row__sub">{{ meal.sub }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__head">
+      <div class="card__title">{{ icons.cart() }} Shopping List</div>
+      <a class="link-more" href="/shopping">View full list {{ icons.arrow_right() }}</a>
+    </div>
+    <div class="card__body">
+      {% for section in shopping %}
+      {% set sid = section.title | lower | replace(' ', '-') %}
+      <div class="shop-section">
+        <div class="shop-section__title">{{ section.title }} ({{ section['items'] | length }})</div>
+        <div class="shop-grid">
+          {% for item in section['items'] %}
+          <div class="check-row">
+            <input type="checkbox" class="check" id="shop-{{ sid }}-{{ loop.index }}">
+            <label for="shop-{{ sid }}-{{ loop.index }}"><span>{{ item }}</span></label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__head">
+      <div class="card__title">{{ icons.school() }} School Plan</div>
+      <a class="link-more" href="/school">View school plan {{ icons.arrow_right() }}</a>
+    </div>
+    <div class="card__body">
+      <div class="school-section">
+        <div class="school-section__title">Homework</div>
+        {% for task in school.homework %}
+        <div class="school-row">
+          <div class="check-row">
+            <input type="checkbox" class="check" id="hw-{{ loop.index }}">
+            <label for="hw-{{ loop.index }}"><span><b>{{ task.who }}</b> – {{ task.what }}</span></label>
+          </div>
+          <span class="school-row__due">Due {{ task.due }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="school-section">
+        <div class="school-section__title">Things to bring</div>
+        {% for task in school.bring %}
+        <div class="school-row">
+          <div class="check-row">
+            <input type="checkbox" class="check" id="bring-{{ loop.index }}">
+            <label for="bring-{{ loop.index }}"><span>{{ task.what }}</span></label>
+          </div>
+          <span class="school-row__due">{{ task.due }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="school-section">
+        <div class="school-section__title">Lunch ideas</div>
+        <div class="chip-row">
+          {% for idea in school.lunch %}
+          <button class="chip">{{ idea }}</button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="row row--bottom">
+  <section class="card">
+    <div class="card__head">
+      <div class="card__title">{{ icons.deals() }} Best Deals This Week</div>
+      <a class="link-more" href="/deals">View deals {{ icons.arrow_right() }}</a>
+    </div>
+    <div class="card__body">
+      <div class="deals-grid">
+        {% for deal in deals %}
+        <div class="deal">
+          <div class="deal__head">
+            <span class="deal__store">{{ deal.store_initial }}</span>
+            <div>
+              <div class="deal__name">{{ deal.name }}</div>
+              <div class="deal__size">{{ deal.size }}</div>
+            </div>
+          </div>
+          <span class="deal__price">{{ deal.price }}</span>
+          <span class="deal__was">{{ deal.was }}</span>
+          <span class="deal__save">Save {{ deal.save }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="scout">
+        {{ icons.sparkle() }}
+        <div>
+          <div class="scout__title">Scout pick</div>
+          <div class="scout__sub">{{ scout.sub }}</div>
+        </div>
+        <span class="scout__ends">{{ scout.ends }}</span>
+        {{ icons.chevron_right() }}
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__head">
+      <div class="card__title">{{ icons.notes() }} Family Notes &amp; Reminders</div>
+      <a class="link-more" href="/notes">View all notes {{ icons.arrow_right() }}</a>
+    </div>
+    <div class="card__body">
+      {% for note in notes %}
+      <div class="note note--{{ note.tone }}">
+        {% if note.tone == "lavender" %}{{ icons.sparkle() }}{% else %}{{ icons.notes() }}{% endif %}
+        <div>
+          <div class="note__title">{{ note.title }}</div>
+          <div class="note__body">{{ note.body }}</div>
+        </div>
+        <span class="note__date">{{ note.date }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card promo">
+    <div class="promo__copy">
+      <h2>Saving you time.<br>Saving you money.</h2>
+      <p><b>nidaro</b> found {{ promo.deals }} deals that match your usual buys. You've saved {{ promo.saved }} so far this week!</p>
+      <a class="btn btn--primary" href="/deals">View all deals &amp; savings</a>
+    </div>
+    <img class="promo__img" src="/static/img/plant.png" alt="" width="190">
+  </section>
+</div>
+{% endblock %}
