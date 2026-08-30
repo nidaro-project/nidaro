@@ -40,7 +40,7 @@ class ApplicationServices:
     def build(cls, sessions: async_sessionmaker[AsyncSession]) -> "ApplicationServices":
         return cls(
             household=HouseholdService(HouseholdRepository(sessions)),
-            calendar=CalendarService(CalendarRepository(sessions)),
+            calendar=CalendarService(CalendarRepository(sessions), HouseholdRepository(sessions)),
             meals=MealsService(MealsRepository(sessions)),
             tasks=TaskService(TaskRepository(sessions)),
             memory=MemoryService(FactRepository(sessions)),
