@@ -63,6 +63,10 @@ _Avoid_: Baccalauréat (the French exam), Bacalaji
 **Škola OnLine**:
 A Czech school information system, second to Bakaláři. Observed for a future gatherer, not built.
 
+**Bakaláři account**:
+One parent login at a Bakaláři server, bound to one kid. A household may hold several — in this family, each kid has their own parent account on the same server.
+_Avoid_: Bakaláři login (as the stored thing), child (the account is the linkage, not a child picked from a list)
+
 **Subject**:
 A school course a kid is taught, named by the school with a short code and a long name. The anchor the what-to-pack mapping keys on.
 _Avoid_: class (the kid's school class group, třída), course
