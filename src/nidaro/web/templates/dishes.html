@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{# Typical dishes — dish configuration, backed by the meals domain service ([mealplan-5]). #}
+{% block title %}Typical dishes · nidaro{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static/css/dishes.css">
+<header class="dishes-head">
+  <div>
+    <h2 class="dishes-title">Typical dishes</h2>
+    <p class="dishes-sub">Your rotation of home-cooked meals, ready to drop onto the week plan.</p>
+  </div>
+  <div class="dishes-head__spacer"></div>
+  <a class="link-more" href="/meals">Week plan →</a>
+</header>
+{% include "dishes_table.html" %}
+{% endblock %}
