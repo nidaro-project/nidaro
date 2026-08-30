@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Table
+from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String, Table
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -37,6 +37,8 @@ class Event(TimestampMixin, Base):
     description: Mapped[str | None]
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_all_day: Mapped[bool] = mapped_column(default=False)
+    recurrence_weekdays: Mapped[list[int] | None] = mapped_column(ARRAY(Integer), nullable=True)
     location: Mapped[str | None]
     status: Mapped[str] = mapped_column(String(40), default="scheduled")
     source_id: Mapped[UUID | None] = mapped_column(ForeignKey("sources.id"), nullable=True)

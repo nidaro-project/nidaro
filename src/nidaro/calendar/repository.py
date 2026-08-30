@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from nidaro.calendar.models import Event
 from nidaro.calendar.schemas import CreateEventRequest
+from nidaro.household.models import FamilyMember
 
 
 class CalendarRepository:
@@ -24,8 +25,15 @@ class CalendarRepository:
             return list(result)
 
     async def create(self, request: CreateEventRequest) -> Event:
+        fields = request.model_dump()
+        participant_ids = fields.pop("participants")
         async with self.sessions.begin() as session:
-            event = Event(**request.model_dump())
+            event = Event(**fields)
+            if participant_ids:
+                members = await session.scalars(
+                    select(FamilyMember).where(FamilyMember.id.in_(participant_ids))
+                )
+                event.participants = list(members)
             session.add(event)
             await session.flush()
             return event
