@@ -9,6 +9,7 @@ from nidaro.calendar.recurrence import resolve_timezone
 from nidaro.calendar.repository import CalendarRepository
 from nidaro.config import get_settings
 from nidaro.db.engine import create_engine, create_session_factory
+from nidaro.db.registry import ensure_full_metadata
 from nidaro.household.models import Household
 from nidaro.household.repository import HouseholdRepository
 from nidaro.household.schemas import CreateHouseholdRequest
@@ -98,6 +99,7 @@ def build_seed_events(household: Household, today: date) -> list[SeedEvent]:
 
 
 async def seed() -> None:
+    ensure_full_metadata()
     settings = get_settings()
     engine = create_engine(settings)
     sessions = create_session_factory(engine)

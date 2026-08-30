@@ -9,6 +9,15 @@ from nidaro.calendar.repository import CalendarRepository
 from nidaro.calendar.schemas import CreateEventRequest, EventView
 from nidaro.calendar.service import CalendarService
 from nidaro.household.models import FamilyMember
+from nidaro.household.repository import HouseholdRepository
+
+
+class FakeHouseholdRepository(HouseholdRepository):
+    def __init__(self):
+        pass
+
+    async def get(self, household_id=None):
+        return None
 
 
 class FakeEventRepository(CalendarRepository):
@@ -70,7 +79,7 @@ async def test_event_service_persists_new_fields():
         repository.members[member_id] = FamilyMember(
             id=member_id, household_id=household_id, name="Member", role="adult"
         )
-    event = await CalendarService(repository).create_event(
+    event = await CalendarService(repository, FakeHouseholdRepository()).create_event(
         CreateEventRequest(
             household_id=household_id,
             title="Swim class",
@@ -93,7 +102,9 @@ async def test_event_service_persists_new_fields():
 @pytest.mark.anyio
 async def test_event_service_defaults_participants_to_household_wide():
     repository = FakeEventRepository()
-    event = await CalendarService(repository).create_event(make_request())
+    event = await CalendarService(repository, FakeHouseholdRepository()).create_event(
+        make_request()
+    )
     assert event.participants == []
     assert repository.events[0].participants == []
 
