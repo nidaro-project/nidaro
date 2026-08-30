@@ -83,11 +83,15 @@ class SchoolService:
         return views
 
     async def lessons_on(self, member_id: UUID, day: date) -> list[LessonView]:
-        return [LessonView.model_validate(l) for l in await self.repository.lessons_on(member_id, day)]
+        return [
+            LessonView.model_validate(row)
+            for row in await self.repository.lessons_on(member_id, day)
+        ]
 
     async def subjects_for(self, member_id: UUID) -> list[SubjectView]:
         return [
-            SubjectView.model_validate(s) for s in await self.repository.subjects_for_member(member_id)
+            SubjectView.model_validate(s)
+            for s in await self.repository.subjects_for_member(member_id)
         ]
 
     async def grades_for(self, member_id: UUID) -> list[GradeView]:

@@ -204,7 +204,7 @@ async def test_apply_day_lands_materialized_lessons(service, member_id, househol
         member_id, household_id, DAY, [lesson_input(1), lesson_input(2, code="ČJ")]
     )
 
-    assert [l.position for l in lessons] == [1, 2]
+    assert [row.position for row in lessons] == [1, 2]
     assert lessons[0].subject.code == "M"
     assert lessons[1].subject.code == "ČJ"
     assert lessons[0].canceled is False
@@ -213,16 +213,20 @@ async def test_apply_day_lands_materialized_lessons(service, member_id, househol
 @pytest.mark.anyio
 async def test_apply_day_replaces_the_day_instead_of_duplicating(service, member_id, household_id):
     await service.apply_day(member_id, household_id, DAY, [lesson_input(1)])
-    lessons = await service.apply_day(member_id, household_id, DAY, [lesson_input(1), lesson_input(2)])
+    lessons = await service.apply_day(
+        member_id, household_id, DAY, [lesson_input(1), lesson_input(2)]
+    )
 
     stored = await service.lessons_on(member_id, DAY)
     assert len(stored) == 2
-    assert [l.id for l in stored] == [l.id for l in lessons]
+    assert [row.id for row in stored] == [row.id for row in lessons]
 
 
 @pytest.mark.anyio
 async def test_lessons_keep_cancellation(service, member_id, household_id):
-    lessons = await service.apply_day(member_id, household_id, DAY, [lesson_input(1, canceled=True)])
+    lessons = await service.apply_day(
+        member_id, household_id, DAY, [lesson_input(1, canceled=True)]
+    )
 
     stored = await service.lessons_on(member_id, DAY)
     assert stored[0].canceled is True

@@ -18,9 +18,7 @@ class SchoolRepository:
     ) -> Subject:
         async with self.sessions.begin() as session:
             row = await session.scalar(
-                select(Subject).where(
-                    Subject.member_id == member_id, Subject.code == subject.code
-                )
+                select(Subject).where(Subject.member_id == member_id, Subject.code == subject.code)
             )
             if row is None:
                 row = Subject(
@@ -86,9 +84,7 @@ class SchoolRepository:
     async def subjects_for_member(self, member_id: UUID) -> list[Subject]:
         async with self.sessions() as session:
             result = await session.scalars(
-                select(Subject)
-                .where(Subject.member_id == member_id)
-                .order_by(Subject.code)
+                select(Subject).where(Subject.member_id == member_id).order_by(Subject.code)
             )
             return list(result)
 
