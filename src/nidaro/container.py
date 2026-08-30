@@ -13,6 +13,8 @@ from nidaro.conversations.service import ConversationService
 from nidaro.household.repository import HouseholdRepository
 from nidaro.household.service import HouseholdService
 from nidaro.jobs.service import JobService
+from nidaro.meals.repository import MealsRepository
+from nidaro.meals.service import MealsService
 from nidaro.memory.repository import FactRepository
 from nidaro.memory.service import MemoryService
 from nidaro.sources.repository import SourceRepository
@@ -25,6 +27,7 @@ from nidaro.tasks.service import TaskService
 class ApplicationServices:
     household: HouseholdService
     calendar: CalendarService
+    meals: MealsService
     tasks: TaskService
     memory: MemoryService
     commitments: CommitmentService
@@ -34,10 +37,11 @@ class ApplicationServices:
     connectors: ConnectorService
 
     @classmethod
-    def build(cls, sessions: async_sessionmaker[AsyncSession]) -> ApplicationServices:
+    def build(cls, sessions: async_sessionmaker[AsyncSession]) -> "ApplicationServices":
         return cls(
             household=HouseholdService(HouseholdRepository(sessions)),
             calendar=CalendarService(CalendarRepository(sessions)),
+            meals=MealsService(MealsRepository(sessions)),
             tasks=TaskService(TaskRepository(sessions)),
             memory=MemoryService(FactRepository(sessions)),
             commitments=CommitmentService(CommitmentRepository(sessions)),
