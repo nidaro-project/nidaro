@@ -1,6 +1,7 @@
 ---
 name: babysit-pr
-description: Drive a pull request towards merge: answer review comments, clear red CI runs, sync with the target branch, polish title and description, and update the linked Rohrpost or GitHub issue.
+description: |
+    Drive a pull request towards merge: answer review comments, clear red CI runs, sync with the target branch, polish title and description, and update the linked Rohrpost or GitHub issue.
 disable-model-invocation: true
 ---
 
