@@ -3,11 +3,14 @@ from datetime import UTC, date, datetime, time, timedelta
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from nidaro.app import create_app
 from nidaro.calendar.recurrence import OccurrenceView
 from nidaro.calendar.schemas import CreateEventRequest, EventView
 from nidaro.calendar.service import CalendarService
+from nidaro.container import ApplicationServices
+from nidaro.household.repository import HouseholdRepository
 from nidaro.household.schemas import FamilyMemberView, HouseholdView
 from nidaro.household.service import HouseholdService
 from nidaro.web.dependencies import get_services
@@ -51,10 +54,28 @@ def test_section_renders_placeholder():
     assert "Shopping is on its way" in response.text
 
 
-def test_meals_section_renders_week_view():
-    response = _client().get("/meals")
+class _NoHouseholdRepository(HouseholdRepository):
+    # The week view's no-household branch renders before any meals query runs,
+    # so this fake keeps PostgreSQL out of a unit test.
+    def __init__(self):
+        super().__init__(async_sessionmaker())
+
+    async def get(self, household_id=None):
+        return None
+
+
+def test_meals_section_is_not_a_placeholder():
+    # Wiring guard: the meals router must own /meals before ui's /{section}
+    # catch-all can shadow it with the placeholder page.
+    app = create_app()
+    base = ApplicationServices.build(async_sessionmaker())
+    app.dependency_overrides[get_services] = lambda: replace(
+        base, household=HouseholdService(_NoHouseholdRepository())
+    )
+    response = TestClient(app).get("/meals")
     assert response.status_code == 200
     assert "Meals is on its way" not in response.text
+    assert "No household yet" in response.text
 
 
 def test_unknown_section_is_not_found():
