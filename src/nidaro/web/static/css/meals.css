@@ -50,7 +50,53 @@
   min-width: 63.5rem;
 }
 
-.meals-corner { min-height: 1rem; }
+.meals-corner { grid-area: corner; min-height: 1rem; }
+
+/* Explicit placement: the area classes below map every element onto the
+   templates (wide + narrow). Without them the grid silently falls back to
+   auto-placement, which only happens to look right on wide screens. */
+
+.a-h0 { grid-area: h0; }
+.a-h1 { grid-area: h1; }
+.a-h2 { grid-area: h2; }
+.a-h3 { grid-area: h3; }
+.a-h4 { grid-area: h4; }
+.a-h5 { grid-area: h5; }
+.a-h6 { grid-area: h6; }
+
+.a-breakfast { grid-area: breakfast; }
+.a-lunch { grid-area: lunch; }
+.a-dinner { grid-area: dinner; }
+.a-snacks { grid-area: snacks; }
+
+.a-0-breakfast { grid-area: d0-breakfast; }
+.a-1-breakfast { grid-area: d1-breakfast; }
+.a-2-breakfast { grid-area: d2-breakfast; }
+.a-3-breakfast { grid-area: d3-breakfast; }
+.a-4-breakfast { grid-area: d4-breakfast; }
+.a-5-breakfast { grid-area: d5-breakfast; }
+.a-6-breakfast { grid-area: d6-breakfast; }
+.a-0-lunch { grid-area: d0-lunch; }
+.a-1-lunch { grid-area: d1-lunch; }
+.a-2-lunch { grid-area: d2-lunch; }
+.a-3-lunch { grid-area: d3-lunch; }
+.a-4-lunch { grid-area: d4-lunch; }
+.a-5-lunch { grid-area: d5-lunch; }
+.a-6-lunch { grid-area: d6-lunch; }
+.a-0-dinner { grid-area: d0-dinner; }
+.a-1-dinner { grid-area: d1-dinner; }
+.a-2-dinner { grid-area: d2-dinner; }
+.a-3-dinner { grid-area: d3-dinner; }
+.a-4-dinner { grid-area: d4-dinner; }
+.a-5-dinner { grid-area: d5-dinner; }
+.a-6-dinner { grid-area: d6-dinner; }
+.a-0-snacks { grid-area: d0-snacks; }
+.a-1-snacks { grid-area: d1-snacks; }
+.a-2-snacks { grid-area: d2-snacks; }
+.a-3-snacks { grid-area: d3-snacks; }
+.a-4-snacks { grid-area: d4-snacks; }
+.a-5-snacks { grid-area: d5-snacks; }
+.a-6-snacks { grid-area: d6-snacks; }
 
 .meals-dayhead {
   display: flex;
