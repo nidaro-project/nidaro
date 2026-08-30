@@ -187,6 +187,7 @@ def test_dish_backed_meals_snapshot_the_dish_name():
     dishes = make_dishes(**{"Sushi Night": "Sushi Friday"})  # renamed after seeding
     meals = build_seed_meals(dishes, TODAY)
     sushi = meal_by_name(meals, "Sushi Friday")
+    assert sushi is not None
     assert sushi.dish_id == dishes["Sushi Night"].id  # plan carries the new name…
     assert meal_by_name(meals, "Sushi Night") is None  # …never the seed-time one
 
@@ -202,7 +203,11 @@ def test_renamed_dish_leaves_its_seed_cell_unplanned():
 def test_seed_meal_slots_and_offsets_are_deterministic():
     meals = build_seed_meals(make_dishes(), TODAY)
     spaghetti = meal_by_name(meals, "Spaghetti Bolognese")
+    assert spaghetti is not None
     assert (spaghetti.on, spaghetti.slot) == (TODAY, "dinner")
     pancakes = meal_by_name(meals, "Pancakes")
+    chili = meal_by_name(meals, "Chili con Carne")
+    assert pancakes is not None
+    assert chili is not None
     assert (pancakes.on, pancakes.slot) == (TODAY + timedelta(days=1), "breakfast")
-    assert meals.index(pancakes) < meals.index(meal_by_name(meals, "Chili con Carne"))
+    assert meals.index(pancakes) < meals.index(chili)
