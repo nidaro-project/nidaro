@@ -4,8 +4,10 @@ Nidaro runs as a fully containerized service in its own Podman pod,
 `nidaro-prod`, managed by systemd user units (Quadlet). The pod shares one
 network namespace: PostgreSQL, Redis, the API, the Taskiq worker, and the
 Taskiq scheduler talk to each other over `localhost`. The only published
-port is the API on `0.0.0.0:8100`. The development setup (compose on host
-ports 5432/6379, dev server on 8000) is not touched and can run in
+port is HTTP on `0.0.0.0:8100`: the UI shell is served at `/` (see
+[DESIGN.md](../DESIGN.md)), the API under `/api/v1`, and `/health` and
+`/ready` remain process/dependency checks. The development setup (compose
+on host ports 5432/6379, dev server on 8000) is not touched and can run in
 parallel.
 
 ## Prerequisites (one time)
@@ -75,10 +77,15 @@ systemctl --user list-units 'nidaro-prod*'
 podman ps --pod                       # per-container health
 curl -s http://localhost:8100/health  # process-only
 curl -s http://localhost:8100/ready   # checks PostgreSQL and Redis
+open http://127.0.0.1:8100/           # the UI shell (rootless quirk: use 127.0.0.1)
 journalctl --user -u nidaro-prod-api.service -f
 journalctl --user -u nidaro-prod-worker.service -f
 journalctl --user -u nidaro-prod-migrate.service    # migration/seed output
 ```
+
+Static assets (CSS, JS, images) are served by the same uvicorn process
+from `/static/*`; they are part of the project wheel, so no extra image
+content or volume is needed.
 
 Use `journalctl --user -u <unit>`, not `podman logs`: containers are
 re-created on every restart, and only journald keeps the history.

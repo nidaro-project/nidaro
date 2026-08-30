@@ -24,7 +24,9 @@ uv tool install aufsicht==0.2.2
 
 Use `aufsicht fast` during development and `aufsicht full` before completing a change.
 
-The API is available at `http://localhost:8000`. `/health` is process-only. `/ready` checks PostgreSQL and Redis. Set `NIDARO_MODEL` and the provider API key before using `/api/v1/assistant/chat`.
+The server exposes the UI shell at `/`, the API under `/api/v1`, and the process checks `/health` and `/ready`. Set `NIDARO_MODEL` and the provider API key before using `/api/v1/assistant/chat`.
+
+The UI shell is served at `/` — a dashboard, placeholder sections, and a settings page with theme switching. Visual conventions and design tokens live in [DESIGN.md](DESIGN.md); a browser smoke test runs via `scripts/e2e_ui_shell.sh` (needs `uv tool install chrome-agent` and a running server).
 
 Run the worker and scheduler in separate terminals:
 
