@@ -5,6 +5,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from nidaro.app import create_app
@@ -89,11 +90,23 @@ class StubHouseholdRepository(HouseholdRepository):
         return self.value
 
 
+_APP: FastAPI | None = None
+
+
+def _base_app() -> FastAPI:
+    # create_app() builds engine/session factories but never connects; cache it
+    # so per-test setup stays cheap. Each test installs its own override.
+    global _APP
+    if _APP is None:
+        _APP = create_app()
+    return _APP
+
+
 def _client(*dishes, seeded=True):
     """TestClient whose services use the stubs; returns it plus the dish stub."""
     meals = StubMealsRepository(dishes)
     household = _household() if seeded else None
-    app = create_app()
+    app = _base_app()
     app.dependency_overrides[get_services] = lambda: replace(
         app.state.services,
         meals=MealsService(meals),
