@@ -98,6 +98,20 @@ editing at once compose instead of clobbering each other. `body=` replaces the
 whole body: read it with `<rohrpost-skill>/scripts/rohrpost show <id> --json`,
 edit, write it back whole.
 
+`body=` is destructive and accepts the empty string silently: a prep step that
+dies before writing the temp file turns `body="$(cat /tmp/next.md)"` into a
+wipe. Never prepare and set in one compound command — a failed prep does not
+stop the shell from running the mutation. The safe sequence:
+
+1. Write the new body to a fresh `mktemp` file, never a reusable name —
+   `/tmp/<ticket>-new.md` from a previous session is still there and will be
+   served up by `cat`.
+2. Check the file before using it: non-empty, and it contains an anchor you
+   know belongs in the new body (`grep -q`).
+3. Run `rp set <id> body="$(cat <file>)" --json` as its own command, only after
+   the prep exited zero (gate with `&&`, or split calls).
+4. `rp show <id> --json` afterwards and verify length + anchor took.
+
 ## Statuses and blocking
 
 `open → in_progress → review → done`, plus `waiting` (stalled on a human) and the
