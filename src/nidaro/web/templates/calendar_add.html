@@ -1,0 +1,78 @@
+{# Add activity: details/summary popover following the mealplan add-pattern.
+   Posts over HTMX to /calendar/events; the response replaces #cal-main, so a
+   success closes and resets the form while a failure re-renders it open with
+   the submitted values and a plain error. The all-day checkbox hides the
+   time inputs (server ignores them for all-day events anyway). #}
+{% import "components/icons.html" as icons %}
+<details class="cal-add"{% if error %} open{% endif %}>
+  <summary class="btn btn--primary">{{ icons.plus() }} Add activity</summary>
+  <form class="cal-add__form card" hx-post="/calendar/events" hx-target="#cal-main" hx-swap="outerHTML">
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="hidden" name="o" value="{{ o }}">
+    {% if error %}<p class="cal-add__error" role="alert">{{ error }}</p>{% endif %}
+    <label class="cal-add__field">
+      <span>Title</span>
+      <input name="title" value="{{ form.title }}" placeholder="Swimming lessons" autocomplete="off">
+    </label>
+    <div class="cal-add__row">
+      <div class="cal-add__field">
+        <span>Repeats</span>
+        <div class="cal-add__modes">
+          <label>
+            <input type="radio" name="mode" value="single"
+                   {% if not (form and form.mode == "weekly") %}checked{% endif %}
+                   onchange="this.form.querySelector('[data-weekdays]').hidden = true">Once
+          </label>
+          <label>
+            <input type="radio" name="mode" value="weekly"
+                   {% if form and form.mode == "weekly" %}checked{% endif %}
+                   onchange="this.form.querySelector('[data-weekdays]').hidden = false">Every week
+          </label>
+        </div>
+      </div>
+      <label class="cal-add__field">
+        <span>Starts on</span>
+        <input type="date" name="on" value="{{ form.on }}">
+      </label>
+    </div>
+    <div class="cal-add__field" data-weekdays{% if not (form and form.mode == "weekly") %} hidden{% endif %}>
+      <span>Every</span>
+      <div class="cal-add__days">
+        {% for day, label in weekday_items %}
+        <label><input type="checkbox" name="weekdays" value="{{ day }}"{% if form and day in form.weekdays %} checked{% endif %}>{{ label }}</label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="cal-add__row">
+      <label class="cal-add__field cal-add__time"{% if form and form.all_day %} hidden{% endif %}>
+        <span>Start time</span>
+        <input type="time" name="starts" value="{{ form.starts }}">
+      </label>
+      <label class="cal-add__field cal-add__time"{% if form and form.all_day %} hidden{% endif %}>
+        <span>End time</span>
+        <input type="time" name="ends" value="{{ form.ends }}">
+      </label>
+      <label class="cal-add__inline">
+        <input type="checkbox" name="all_day" value="on"{% if form and form.all_day %} checked{% endif %}
+               onchange="this.form.querySelectorAll('.cal-add__time').forEach((el) => { el.hidden = this.checked })">
+        All day
+      </label>
+    </div>
+    <div class="cal-add__row">
+      <label class="cal-add__field">
+        <span>Who</span>
+        <select name="participants" multiple>
+          {% for pid, person in people.items() %}
+          <option value="{{ pid }}"{% if form and pid in form.participants %} selected{% endif %}>{{ person[0] }}</option>
+          {% endfor %}
+        </select>
+        <span class="cal-add__hint">Empty means the whole household.</span>
+      </label>
+      <label class="cal-add__field">
+        <span>Where</span>
+        <input name="location" value="{{ form.location }}" placeholder="Optional" autocomplete="off">
+      </label>
+    </div>
+    <button class="btn btn--primary cal-add__submit">Add activity</button>
+  </form>
+</details>

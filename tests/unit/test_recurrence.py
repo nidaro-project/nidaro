@@ -9,6 +9,7 @@ from nidaro.calendar.recurrence import (
     MAX_RANGE_DAYS,
     expand_event,
     expand_events,
+    first_weekday_on_or_after,
     resolve_timezone,
     validate_range,
     window_bounds,
@@ -175,3 +176,15 @@ def test_expand_events_filters_everything_outside_window():
         [event], PRAGUE, MONDAY + timedelta(days=40), MONDAY + timedelta(days=50)
     )
     assert merged == []
+
+
+def test_first_weekday_on_or_after_hits_same_day():
+    assert first_weekday_on_or_after(MONDAY, (0, 3)) == MONDAY
+
+
+def test_first_weekday_on_or_after_moves_forward_in_the_week():
+    assert first_weekday_on_or_after(MONDAY, (3,)) == THURSDAY
+
+
+def test_first_weekday_on_or_after_wraps_into_the_next_week():
+    assert first_weekday_on_or_after(THURSDAY, (0,)) == MONDAY + timedelta(days=7)

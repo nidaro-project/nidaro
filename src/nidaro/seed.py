@@ -5,7 +5,7 @@ from datetime import date, datetime, time, timedelta
 from uuid import UUID
 
 from nidaro.calendar.models import Event
-from nidaro.calendar.recurrence import resolve_timezone
+from nidaro.calendar.recurrence import first_weekday_on_or_after, resolve_timezone
 from nidaro.calendar.repository import CalendarRepository
 from nidaro.config import get_settings
 from nidaro.db.engine import create_engine, create_session_factory
@@ -44,10 +44,8 @@ class SeedEvent:
 
 
 def next_weekday(after: date, weekdays: Iterable[int]) -> date:
-    candidate = after + timedelta(days=1)
-    while candidate.weekday() not in weekdays:
-        candidate += timedelta(days=1)
-    return candidate
+    """First weekday strictly after ``after``: seeded series begin tomorrow or later."""
+    return first_weekday_on_or_after(after + timedelta(days=1), weekdays)
 
 
 def build_seed_events(household: Household, today: date) -> list[SeedEvent]:
