@@ -12,6 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 
 from nidaro.container import ApplicationServices
+from nidaro.household.schemas import HouseholdView
 from nidaro.meals.schemas import PlanMealRequest, PlannedMealView, Slot
 from nidaro.web.dependencies import get_services
 from nidaro.web.routes.ui import _nav, templates
@@ -58,19 +59,27 @@ def _day_views(days: list[date], grouped: dict[tuple[date, Slot], list[PlannedMe
     ]
 
 
-async def _cell_fragment(
-    request: Request,
-    services: ApplicationServices,
-    on: date,
-    slot: Slot,
-    w: int,
-):
+async def _guard(services: ApplicationServices, w: int, on: date):
+    # Shared preconditions for the mutation endpoints: a seeded household and a
+    # date inside the displayed window. Runs BEFORE any service mutation.
     household = await services.household.get_household()
     if household is None:
         raise HTTPException(status_code=404, detail="Household not seeded")
     days = _window(w)
     if on not in days:
         raise HTTPException(status_code=404, detail="Date outside the displayed week")
+    return household, days
+
+
+async def _cell_fragment(
+    request: Request,
+    services: ApplicationServices,
+    household: HouseholdView,
+    days: list[date],
+    on: date,
+    slot: Slot,
+    w: int,
+):
     dishes = await services.meals.list_dishes(household.id)
     planned = await services.meals.list_planned_meals(household.id, on, on)
     day = _day_view(on, days.index(on)) | {
@@ -121,13 +130,11 @@ async def plan(
     name: Annotated[str, Form()] = "",
     services: ApplicationServices = Depends(get_services),  # noqa: B008
 ):
-    household = await services.household.get_household()
-    if household is None:
-        raise HTTPException(status_code=404, detail="Household not seeded")
+    household, days = await _guard(services, w, on)
     clean = name.strip()
     if not dish_id and not clean:
         # Nothing picked and nothing typed: just re-render the cell as-is.
-        return await _cell_fragment(request, services, on, slot, w)
+        return await _cell_fragment(request, services, household, days, on, slot, w)
     # The dropdown wins over a typed name: a one-off name only applies when
     # the dropdown is left on its empty "One-off…" option.
     try:
@@ -140,7 +147,7 @@ async def plan(
         await services.meals.plan_meal(planned)
     except ValueError:
         raise HTTPException(status_code=404, detail="Dish not found") from None
-    return await _cell_fragment(request, services, on, slot, w)
+    return await _cell_fragment(request, services, household, days, on, slot, w)
 
 
 @router.post("/planned/remove")
@@ -152,5 +159,6 @@ async def remove(
     meal_id: Annotated[UUID, Form()],
     services: ApplicationServices = Depends(get_services),  # noqa: B008
 ):
+    household, days = await _guard(services, w, on)
     await services.meals.remove_planned_meal(meal_id)
-    return await _cell_fragment(request, services, on, slot, w)
+    return await _cell_fragment(request, services, household, days, on, slot, w)
