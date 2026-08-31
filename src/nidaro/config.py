@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     # and over a 127.0.0.1-published port in development, so only the port
     # is configurable.
     chromium_cdp_port: int = 9222
+    # Google Calendar OAuth web flow, from Google Cloud Console credentials.
+    # Without a client id/secret the connector stays dormant: no account can
+    # connect, everything else keeps working. See docs/deployment.md.
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    google_redirect_uri: str = "http://localhost:8100/api/v1/connectors/google-calendar/callback"
 
     model_config = SettingsConfigDict(
         env_prefix="NIDARO_",

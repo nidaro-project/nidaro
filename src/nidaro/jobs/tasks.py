@@ -5,8 +5,14 @@ config is due (per-household cadence via `ConnectorConfigService.due`,
 NIDAR-8fq38r) and whose connector is actually registered; the job itself runs
 the sync through `ApplicationServices.connectors`, the same seam the manual
 refresh and any future route or assistant tool use.
+
+Connectors listed in APPLIERS get their ExternalRecords applied to the domain
+by the named service after the sync (google_calendar -> calendar). Connectors
+without an entry apply internally during sync (WhatsApp events, the Bakaláři
+gather into the school domain) — connector_sync routes on that split.
 """
 
+from collections.abc import Awaitable, Callable
 from uuid import UUID
 
 from nidaro.config import get_settings
@@ -14,6 +20,8 @@ from nidaro.connectors.models import ConnectorConfig, ConnectorContext
 from nidaro.container import ApplicationServices
 from nidaro.db.engine import create_engine, create_session_factory
 from nidaro.jobs.broker import broker
+
+APPLIERS: dict[str, str] = {"google_calendar": "calendar"}
 
 _services: ApplicationServices | None = None
 
@@ -36,8 +44,8 @@ async def heartbeat() -> dict[str, str]:
 async def due_registered(services: ApplicationServices) -> list[ConnectorConfig]:
     """Enabled configs whose cadence elapsed, limited to registered connectors.
 
-    Configs for connectors that are not built yet (WhatsApp, Google Calendar)
-    stay in the database but are skipped here instead of failing the pass.
+    Configs for connectors that are not built yet stay in the database but are
+    skipped here instead of failing the pass.
     """
     registered = set(services.connectors.registry.names())
     return [
@@ -50,7 +58,11 @@ async def due_registered(services: ApplicationServices) -> list[ConnectorConfig]
 async def sync_household_now(
     services: ApplicationServices, connector_name: str, household_id: str
 ) -> dict[str, str | int]:
-    """One connector sync for one household — the worker's and the routes' body."""
+    """One connector sync for one household — the internal-applier body.
+
+    The connector applies its own records during sync (WhatsApp events, the
+    Bakaláři gather); this body reports the record count.
+    """
     household = await services.household.get_household(UUID(household_id))
     if household is None:
         return {
@@ -68,6 +80,64 @@ async def sync_household_now(
     }
 
 
+async def run_connector_sync(services, connector_name: str, household_id: str) -> dict:
+    """One connector run for one household: sync, then apply to the domain."""
+    outcome = {
+        "connector": connector_name,
+        "household_id": household_id,
+    }
+    applier = APPLIERS.get(connector_name)
+    if applier is None:
+        return {**outcome, "status": "no_applier"}
+    household = await services.household.get_household(UUID(household_id))
+    if household is None:
+        return {**outcome, "status": "no_household"}
+    result = await services.connectors.sync(
+        connector_name,
+        ConnectorContext(household_id=household_id, timezone=household.timezone),
+    )
+    report = await getattr(services, applier).apply_external_records(
+        UUID(household_id), result.records
+    )
+    return {
+        **outcome,
+        "status": "ok",
+        "applied": report.applied,
+        "removed": report.removed,
+        "skipped": report.skipped,
+    }
+
+
+async def run_due_connector_syncs(
+    services, *, now=None, run: Callable[..., Awaitable[dict]] | None = None
+) -> dict:
+    """The sweep body: every due config, each household isolated.
+
+    One household's failure must not block the others, so per-config errors
+    are reported in the result instead of aborting the sweep.
+    """
+    due = await services.connector_configs.due(now)
+    run_one = run or run_connector_sync
+    results = [
+        await _isolate(run_one, services, config.connector, str(config.household_id))
+        for config in due
+    ]
+    return {"status": "ok", "ran": len(results), "results": results}
+
+
+async def _isolate(run_one, services, connector_name: str, household_id: str) -> dict:
+    try:
+        return await run_one(services, connector_name, household_id)
+    except Exception as error:  # isolation is the point: one household's
+        # failure must not block the others' syncs
+        return {
+            "connector": connector_name,
+            "household_id": household_id,
+            "status": "error",
+            "error": str(error),
+        }
+
+
 @broker.task(schedule=[{"cron": "0 * * * *"}])
 async def gather_due() -> dict[str, int]:
     """Roughly hourly: dispatch every due registered connector, per household."""
@@ -80,5 +150,11 @@ async def gather_due() -> dict[str, int]:
 
 @broker.task
 async def connector_sync(connector_name: str, household_id: str) -> dict[str, str | int]:
-    """Sync one connector for one household."""
+    """Sync one connector for one household.
+
+    APPLIERS connectors run the sync-then-apply body; internal appliers run
+    the plain sync and count records.
+    """
+    if connector_name in APPLIERS:
+        return await run_connector_sync(job_services(), connector_name, household_id)
     return await sync_household_now(job_services(), connector_name, household_id)
