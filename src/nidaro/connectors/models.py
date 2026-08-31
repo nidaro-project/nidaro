@@ -13,8 +13,18 @@ from nidaro.db.types import new_uuid
 
 
 class ConnectorContext(BaseModel):
+    """Scope of one sync run: the household, its timezone, and its secrets.
+
+    `credentials` carries decrypted secret material for this run only —
+    the caller (worker, route) resolves the names listed in the household's
+    connector config through `ConnectorCredentialService` and never
+    persists, logs, or stores what lands here. Connectors stay secret-blind:
+    they see exactly the names their module documents (e.g. `apple_id`).
+    """
+
     household_id: str
     timezone: str
+    credentials: dict[str, str] = {}
 
 
 class ExternalRecord(BaseModel):
