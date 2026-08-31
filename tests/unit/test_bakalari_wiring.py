@@ -90,7 +90,7 @@ def base_services() -> ApplicationServices:
 def test_bakalari_connector_is_registered():
     services = base_services()
 
-    assert services.connectors.registry.names() == ["bakalari"]
+    assert sorted(services.connectors.registry.names()) == ["bakalari", "whatsapp"]
 
 
 @pytest.mark.anyio
