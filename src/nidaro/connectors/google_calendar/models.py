@@ -1,6 +1,7 @@
 from typing import Any
 from uuid import UUID
 
+from pydantic import BaseModel
 from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -29,3 +30,12 @@ class GoogleCalendarAccount(TimestampMixin, Base):
     google_email: Mapped[str] = mapped_column(String(250))
     calendar_id: Mapped[str] = mapped_column(String(250), default="primary")
     granted_scopes: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+
+
+class GoogleAccountCredentials(BaseModel):
+    """One account ready for API calls: metadata plus a usable refresh token."""
+
+    email: str
+    calendar_id: str
+    scopes: list[str]
+    refresh_token: str

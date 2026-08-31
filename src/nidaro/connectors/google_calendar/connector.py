@@ -24,11 +24,11 @@ from nidaro.calendar.recurrence import resolve_timezone
 from nidaro.connectors.base import StaleCursorError
 from nidaro.connectors.google_calendar.accounts import (
     CONNECTOR_NAME,
-    GoogleAccountCredentials,
     GoogleCalendarAccountService,
 )
 from nidaro.connectors.google_calendar.client import GoogleApiError, GoogleCalendarClient
 from nidaro.connectors.google_calendar.mapping import FULL_SYNC_DAYS, to_external_record
+from nidaro.connectors.google_calendar.models import GoogleAccountCredentials
 from nidaro.connectors.google_calendar.oauth import InvalidGrantError
 from nidaro.connectors.models import ConnectorContext, SyncResult
 from nidaro.db.types import utc_now

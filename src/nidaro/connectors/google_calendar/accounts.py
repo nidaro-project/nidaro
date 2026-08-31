@@ -8,23 +8,20 @@ the only place that joins the two halves back together.
 
 from uuid import UUID
 
-from pydantic import BaseModel
+import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from nidaro.connectors.google_calendar.models import GoogleCalendarAccount
+from nidaro.connectors.google_calendar.client import GoogleCalendarClient
+from nidaro.connectors.google_calendar.models import GoogleAccountCredentials, GoogleCalendarAccount
+from nidaro.connectors.google_calendar.oauth import GoogleOAuthSettings, exchange_code
 from nidaro.connectors.service import ConnectorCredentialService
 
 CONNECTOR_NAME = "google_calendar"
 
 
-class GoogleAccountCredentials(BaseModel):
-    """One account ready for API calls: metadata plus a usable refresh token."""
-
-    email: str
-    calendar_id: str
-    scopes: list[str]
-    refresh_token: str
+class GoogleConnectionError(RuntimeError):
+    """The OAuth web flow could not be completed for the consenting member."""
 
 
 class GoogleCalendarAccountRepository:
@@ -122,6 +119,40 @@ class GoogleCalendarAccountService:
             email,
             calendar_id=calendar_id,
             granted_scopes=granted_scopes if granted_scopes is not None else [],
+        )
+
+    async def complete_connection(
+        self,
+        household_id: UUID,
+        code: str,
+        *,
+        oauth: GoogleOAuthSettings,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> GoogleCalendarAccount:
+        """Finish a web-flow connect — the OAuth callback's single call.
+
+        Exchanges the authorization code, identifies the consenting account
+        via its primary calendar (its id is the email — no userinfo scope
+        needed), and stores the refresh token encrypted under that email.
+        """
+        async with httpx.AsyncClient(transport=transport) as http:
+            tokens = await exchange_code(oauth, code, http=http)
+        if tokens.refresh_token is None:
+            raise GoogleConnectionError(
+                "Google did not return a refresh token; the member must consent again"
+            )
+        client = GoogleCalendarClient(oauth, transport=transport)
+        calendar = await client.primary_calendar_for_token(tokens.refresh_token)
+        email = calendar.get("id")
+        if not email:
+            raise GoogleConnectionError(
+                "Google did not identify the account that consented; nothing was stored"
+            )
+        return await self.register(
+            household_id,
+            str(email),
+            tokens.refresh_token,
+            granted_scopes=tokens.scope.split(),
         )
 
     async def credentials_for_household(self, household_id: UUID) -> list[GoogleAccountCredentials]:

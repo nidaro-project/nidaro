@@ -30,7 +30,6 @@ from nidaro.calendar.schemas import CreateEventRequest, EventView
 from nidaro.calendar.service import CalendarService
 from nidaro.connectors.google_calendar.accounts import (
     CONNECTOR_NAME,
-    GoogleAccountCredentials,
     GoogleCalendarAccountService,
 )
 from nidaro.connectors.google_calendar.client import (
@@ -45,6 +44,7 @@ from nidaro.connectors.google_calendar.mapping import (
     split_external_id,
     to_external_record,
 )
+from nidaro.connectors.google_calendar.models import GoogleAccountCredentials
 from nidaro.connectors.models import ExternalRecord
 from nidaro.db.types import utc_now
 from nidaro.household.service import HouseholdService

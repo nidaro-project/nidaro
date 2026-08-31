@@ -25,7 +25,7 @@ import httpx
 from pydantic import BaseModel
 
 from nidaro.connectors.base import StaleCursorError
-from nidaro.connectors.google_calendar.accounts import GoogleAccountCredentials
+from nidaro.connectors.google_calendar.models import GoogleAccountCredentials
 from nidaro.connectors.google_calendar.oauth import (
     GoogleOAuthSettings,
     InvalidGrantError,

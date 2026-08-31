@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+import httpx
 import pytest
 from cryptography.fernet import Fernet
 
@@ -9,7 +10,9 @@ from nidaro.connectors.google_calendar.accounts import (
     GoogleCalendarAccount,
     GoogleCalendarAccountRepository,
     GoogleCalendarAccountService,
+    GoogleConnectionError,
 )
+from nidaro.connectors.google_calendar.oauth import GoogleOAuthSettings
 from nidaro.connectors.service import ConnectorCredentialService
 from nidaro.db.types import new_uuid, utc_now
 
@@ -144,3 +147,73 @@ async def test_forget_removes_row_and_credential():
     assert await service.forget(household_id, "ada@example.com") is True
     assert await service.credentials_for_household(household_id) == []
     assert await service.forget(household_id, "ada@example.com") is False
+
+
+@pytest.mark.anyio
+async def test_complete_connection_exchanges_identifies_and_stores():
+    service, credentials = make_service()
+    household_id = uuid4()
+    code = "auth-code-1"
+
+    def token_handler(request):
+        if b"grant_type=refresh_token" in request.content:
+            return httpx.Response(200, json={"access_token": "at-2", "expires_in": 3600})
+        assert "code=auth-code-1" in request.content.decode()
+        return httpx.Response(
+            200,
+            json={
+                "access_token": "at-1",
+                "expires_in": 3600,
+                "refresh_token": "rt-new",
+                "scope": "https://www.googleapis.com/auth/calendar.events",
+            },
+        )
+
+    def api_handler(request):
+        return httpx.Response(200, json={"id": "ada@example.com"})
+
+    transport = httpx.MockTransport(
+        lambda request: (
+            token_handler(request)
+            if request.url.host == "oauth2.googleapis.com"
+            else api_handler(request)
+        )
+    )
+
+    row = await service.complete_connection(
+        household_id,
+        code,
+        oauth=GoogleOAuthSettings(
+            client_id="id", client_secret="secret", redirect_uri="http://localhost/cb"
+        ),
+        transport=transport,
+    )
+
+    assert row.google_email == "ada@example.com"
+    assert row.granted_scopes == ["https://www.googleapis.com/auth/calendar.events"]
+    (account,) = await service.credentials_for_household(household_id)
+    assert account.refresh_token == "rt-new"
+    assert (
+        credentials.repository.ciphertexts[(household_id, CONNECTOR_NAME, "ada@example.com")]
+        != "rt-new"
+    )
+
+
+@pytest.mark.anyio
+async def test_complete_connection_without_refresh_token_stores_nothing():
+    service, credentials = make_service()
+
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(200, json={"access_token": "at-1"})
+    )
+
+    with pytest.raises(GoogleConnectionError, match="refresh token"):
+        await service.complete_connection(
+            uuid4(),
+            "code",
+            oauth=GoogleOAuthSettings(
+                client_id="id", client_secret="secret", redirect_uri="http://localhost/cb"
+            ),
+            transport=transport,
+        )
+    assert credentials.repository.ciphertexts == {}

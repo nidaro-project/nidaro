@@ -27,7 +27,8 @@ from pydantic import BaseModel, ValidationError
 
 from nidaro.calendar.recurrence import resolve_timezone
 from nidaro.calendar.schemas import ExternalEventPayload
-from nidaro.connectors.google_calendar.accounts import CONNECTOR_NAME, GoogleAccountCredentials
+from nidaro.connectors.google_calendar.accounts import CONNECTOR_NAME
+from nidaro.connectors.google_calendar.models import GoogleAccountCredentials
 from nidaro.connectors.models import ExternalRecord
 
 EXTERNAL_TYPE = "calendar_event"

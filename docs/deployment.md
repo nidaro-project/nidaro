@@ -146,6 +146,47 @@ A row that no longer matches any configured key makes
 never the secret itself. The affected credential must be re-entered
 (`set` through the service seam) and the rotation re-run.
 
+### Connecting Google Calendar
+
+The Google Calendar connector uses three-legged OAuth (one consent per
+family member — service accounts cannot reach personal `@gmail.com`
+calendars). Setup, once per nidaro instance:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a
+   project, configure the OAuth consent screen as **External**, and create
+   an **OAuth client ID** of type **Web application**.
+2. Register the exact redirect URI
+   `http://<host>:8100/api/v1/connectors/google-calendar/callback`
+   (Authorized redirect URIs). The default `NIDARO_GOOGLE_REDIRECT_URI`
+   already matches this route on `localhost:8100`; change it if the API is
+   reached under another address.
+3. Put the client id and secret into `~/.config/nidaro/prod.env` as
+   `NIDARO_GOOGLE_CLIENT_ID` / `NIDARO_GOOGLE_CLIENT_SECRET` and restart
+   the pod.
+
+Each family member then opens
+`http://<host>:8100/api/v1/connectors/google-calendar/connect` in their own
+browser, clicks through Google's screens, and lands back in Settings. The
+refresh token is stored encrypted (same `NIDARO_CREDENTIAL_KEY` store as the
+other connector secrets); only its ciphertext reaches PostgreSQL.
+
+**Publishing status (decided):** the consent screen should be switched to
+**In production (unverified)** before real use. Consequences of the two
+options:
+
+- *In production, unverified*: members see an "unverified app" warning
+  screen, and the app is capped at 100 new users until it is verified —
+  both irrelevant for one household. Refresh tokens are **stable**.
+- *Testing*: no warning-screen hurdle, but every refresh token **expires
+  after 7 days** and each member must re-consent weekly. Unusable for an
+  always-on sync.
+
+If a member's sync stops with `invalid_grant` (worker log: "must reconnect
+their account"), their token was revoked or expired — they re-run the
+connect link. Sync cadence per household comes from the connector config
+(`poll_seconds`); the sync itself is read-mostly polling plus the
+assistant's create/update/delete writes through the Google write service.
+
 ## Data backup
 
 ```bash

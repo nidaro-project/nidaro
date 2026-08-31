@@ -9,6 +9,7 @@ from nidaro.config import get_settings
 from nidaro.container import ApplicationServices
 from nidaro.db.engine import create_engine, create_session_factory
 from nidaro.web.routes import assistant, calendar, dishes, family, health, meals, school, ui
+from nidaro.web.routes import google_calendar as google_calendar_routes
 
 
 def create_app() -> FastAPI:
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     app.include_router(meals.router)
     app.include_router(dishes.router)  # before ui: its /{section} catch-all must not shadow
     app.include_router(school.router)  # before ui: same catch-all shadowing rule
+    app.include_router(google_calendar_routes.router)
     app.include_router(ui.router)
     app.mount("/static", StaticFiles(directory=ui.STATIC_DIR), name="static")
 
