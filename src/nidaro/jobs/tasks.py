@@ -6,10 +6,14 @@ NIDAR-8fq38r) and whose connector is actually registered; the job itself runs
 the sync through `ApplicationServices.connectors`, the same seam the manual
 refresh and any future route or assistant tool use.
 
-Connectors listed in APPLIERS get their ExternalRecords applied to the domain
-by the named service after the sync (google_calendar -> calendar). Connectors
-without an entry apply internally during sync (WhatsApp events, the Bakaláři
-gather into the school domain) — connector_sync routes on that split.
+Routing per connector:
+- google_calendar runs the sync-then-apply body (APPLIERS -> CalendarService
+  applies the mirrored events).
+- icloud_calendar runs through the credential-aware runner
+  (`connectors.runner.sync_connector`), which decrypts the household's
+  credentials into the run's context and mirrors calendar events.
+- bakalari and whatsapp apply internally during sync (WhatsApp events, the
+  Bakaláři gather into the school domain) — the plain body counts records.
 """
 
 from collections.abc import Awaitable, Callable
@@ -17,6 +21,7 @@ from uuid import UUID
 
 from nidaro.config import get_settings
 from nidaro.connectors.models import ConnectorConfig, ConnectorContext
+from nidaro.connectors.runner import sync_connector
 from nidaro.container import ApplicationServices
 from nidaro.db.engine import create_engine, create_session_factory
 from nidaro.jobs.broker import broker
@@ -81,7 +86,7 @@ async def sync_household_now(
 
 
 async def run_connector_sync(services, connector_name: str, household_id: str) -> dict:
-    """One connector run for one household: sync, then apply to the domain."""
+    """One google_calendar run for one household: sync, then mirror to the domain."""
     outcome = {
         "connector": connector_name,
         "household_id": household_id,
@@ -150,11 +155,9 @@ async def gather_due() -> dict[str, int]:
 
 @broker.task
 async def connector_sync(connector_name: str, household_id: str) -> dict[str, str | int]:
-    """Sync one connector for one household.
-
-    APPLIERS connectors run the sync-then-apply body; internal appliers run
-    the plain sync and count records.
-    """
+    """Sync one connector for one household, routed by applier kind."""
+    if connector_name == "icloud_calendar":
+        return dict(sync_connector(job_services(), connector_name, UUID(household_id)))
     if connector_name in APPLIERS:
         return await run_connector_sync(job_services(), connector_name, household_id)
     return await sync_household_now(job_services(), connector_name, household_id)

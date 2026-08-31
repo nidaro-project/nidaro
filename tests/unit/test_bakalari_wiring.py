@@ -93,6 +93,7 @@ def test_bakalari_connector_is_registered():
     assert sorted(services.connectors.registry.names()) == [
         "bakalari",
         "google_calendar",
+        "icloud_calendar",
         "whatsapp",
     ]
 

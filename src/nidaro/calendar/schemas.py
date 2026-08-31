@@ -62,6 +62,14 @@ class ExternalEventPayload(BaseModel):
     description: str | None = None
     location: str | None = None
     is_all_day: bool = False
+    recurrence_weekdays: list[int] | None = None
+
+    @field_validator("recurrence_weekdays")
+    @classmethod
+    def check_weekdays(cls, value):
+        if value and any(day not in range(7) for day in value):
+            raise ValueError("recurrence_weekdays must contain integers 0..6 (0=Monday)")
+        return value
 
 
 class MirrorApplyReport(BaseModel):

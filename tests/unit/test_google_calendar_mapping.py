@@ -88,6 +88,7 @@ def test_timed_event_maps_into_the_external_payload_shape():
         "description": "six-month check",
         "location": "Vinohrady",
         "is_all_day": False,
+        "recurrence_weekdays": None,
     }
     assert len(record.content_hash) == 64
 
