@@ -1,15 +1,20 @@
+from collections.abc import Sequence
+from datetime import datetime, timedelta
 from typing import Protocol
 from uuid import UUID
 
 from nidaro.connectors.base import StaleCursorError
 from nidaro.connectors.crypto import CredentialKeyMissing, SecretBox
 from nidaro.connectors.models import (
+    DEFAULT_POLL_SECONDS,
+    ConnectorConfig,
     ConnectorContext,
     ConnectorCredential,
     ConnectorCursor,
     SyncResult,
 )
 from nidaro.connectors.registry import ConnectorRegistry
+from nidaro.db.types import utc_now
 
 
 class ConnectorCursorRepositoryProtocol(Protocol):
@@ -20,12 +25,37 @@ class ConnectorCursorRepositoryProtocol(Protocol):
     async def clear(self, household_id: UUID, connector: str) -> bool: ...
 
 
+class ConnectorConfigRepositoryProtocol(Protocol):
+    async def get(self, household_id: UUID, connector: str) -> ConnectorConfig | None: ...
+
+    async def upsert(
+        self,
+        household_id: UUID,
+        connector: str,
+        *,
+        enabled: bool,
+        credential_names: list[str],
+        trigger_word: str | None,
+        poll_seconds: int,
+    ) -> ConnectorConfig: ...
+
+    async def enabled_for_household(self, household_id: UUID) -> list[ConnectorConfig]: ...
+
+    async def all_enabled(self) -> list[ConnectorConfig]: ...
+
+    async def stamp_synced(self, household_id: UUID, connector: str, at: datetime) -> bool: ...
+
+
 class ConnectorService:
     def __init__(
-        self, registry: ConnectorRegistry, cursors: ConnectorCursorRepositoryProtocol
+        self,
+        registry: ConnectorRegistry,
+        cursors: ConnectorCursorRepositoryProtocol,
+        configs: ConnectorConfigRepositoryProtocol | None = None,
     ) -> None:
         self.registry = registry
         self.cursors = cursors
+        self.configs = configs
 
     async def sync(
         self, name: str, context: ConnectorContext, cursor: str | None = None
@@ -38,6 +68,11 @@ class ConnectorService:
         rejects the stored cursor raises `StaleCursorError`; the stored cursor
         is cleared before the error propagates, making the next sync start
         fresh. A run without a `next_cursor` leaves the stored cursor as-is.
+
+        When a config repository is wired, every completed run stamps
+        `last_synced_at` on the household's config row — the basis on which
+        the scheduler honors per-household cadence. A failed run does not
+        stamp, so the config stays due on the next scheduler pass.
         """
         household_id = UUID(context.household_id)
         effective = cursor if cursor is not None else await self.cursors.get(household_id, name)
@@ -48,7 +83,90 @@ class ConnectorService:
             raise
         if result.next_cursor is not None:
             await self.cursors.save(household_id, name, result.next_cursor)
+        if self.configs is not None:
+            await self.configs.stamp_synced(household_id, name, utc_now())
         return result
+
+
+class ConnectorConfigService:
+    """Per-household connector onboarding, persisted in PostgreSQL.
+
+    One `connector_configs` row per (household, connector): enabled flag,
+    credential references (names stored via `ConnectorCredentialService.set`
+    — identifiers, never secret material), the WhatsApp trigger word, and
+    the polling cadence. `ConnectorService.sync` stamps `last_synced_at`,
+    so `due` reflects runs no matter which path triggered them — worker,
+    route, or assistant tool.
+    """
+
+    def __init__(self, repository: ConnectorConfigRepositoryProtocol) -> None:
+        self.repository = repository
+
+    async def enable(
+        self,
+        household_id: UUID,
+        connector: str,
+        *,
+        credential_names: Sequence[str] = (),
+        trigger_word: str | None = None,
+        poll_seconds: int = DEFAULT_POLL_SECONDS,
+    ) -> ConnectorConfig:
+        """Onboard (or reconfigure) one connector for a household — one call.
+
+        The arguments are the full desired intake and overwrite whatever the
+        household had stored for the connector; a disabled row is re-enabled
+        in place.
+        """
+        if poll_seconds < 1:
+            raise ValueError(f"poll_seconds must be at least 1, got {poll_seconds}")
+        return await self.repository.upsert(
+            household_id,
+            connector,
+            enabled=True,
+            credential_names=list(credential_names),
+            trigger_word=trigger_word,
+            poll_seconds=poll_seconds,
+        )
+
+    async def disable(self, household_id: UUID, connector: str) -> bool:
+        """Disable the connector, keeping its intake for a later re-enable.
+
+        Returns whether an enabled config was found and disabled.
+        """
+        row = await self.repository.get(household_id, connector)
+        if row is None or not row.enabled:
+            return False
+        await self.repository.upsert(
+            household_id,
+            connector,
+            enabled=False,
+            credential_names=row.credential_names,
+            trigger_word=row.trigger_word,
+            poll_seconds=row.poll_seconds,
+        )
+        return True
+
+    async def get(self, household_id: UUID, connector: str) -> ConnectorConfig | None:
+        return await self.repository.get(household_id, connector)
+
+    async def enabled(self, household_id: UUID) -> list[ConnectorConfig]:
+        """Enabled connector configs for one household."""
+        return await self.repository.enabled_for_household(household_id)
+
+    async def due(self, now: datetime | None = None) -> list[ConnectorConfig]:
+        """Enabled configs across all households whose cadence has elapsed.
+
+        A config that has never synced is immediately due. The scheduler
+        calls this without arguments and dispatches each returned config's
+        connector for its household.
+        """
+        moment = utc_now() if now is None else now
+        return [
+            row
+            for row in await self.repository.all_enabled()
+            if row.last_synced_at is None
+            or row.last_synced_at + timedelta(seconds=row.poll_seconds) <= moment
+        ]
 
 
 class ConnectorCredentialRepositoryProtocol(Protocol):

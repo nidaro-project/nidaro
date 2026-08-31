@@ -3,7 +3,8 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -55,6 +56,35 @@ class ConnectorCursor(TimestampMixin, Base):
     household_id: Mapped[UUID] = mapped_column(ForeignKey("households.id"), index=True)
     connector: Mapped[str] = mapped_column(String(100))
     cursor: Mapped[str] = mapped_column(Text)
+
+
+# Cadence a household gets when onboarding without stating one: 15 minutes.
+DEFAULT_POLL_SECONDS = 900
+
+
+class ConnectorConfig(TimestampMixin, Base):
+    """Per-household onboarding of one connector, stored in PostgreSQL.
+
+    One row per (household, connector): whether the connector is enabled,
+    the names of the credentials it uses (references into
+    `connector_credentials` — identifiers, never secret material), the
+    WhatsApp trigger word, and the polling cadence. `last_synced_at` is
+    stamped by `ConnectorService.sync` after every completed run; the
+    scheduler derives which configs are due from it plus `poll_seconds`.
+    Disabling keeps the row so a re-enable needs no re-intake.
+    """
+
+    __tablename__ = "connector_configs"
+    __table_args__ = (UniqueConstraint("household_id", "connector"),)
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    household_id: Mapped[UUID] = mapped_column(ForeignKey("households.id"), index=True)
+    connector: Mapped[str] = mapped_column(String(100))
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    credential_names: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    trigger_word: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    poll_seconds: Mapped[int] = mapped_column(Integer, default=DEFAULT_POLL_SECONDS)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ConnectorCredential(TimestampMixin, Base):
