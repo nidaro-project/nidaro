@@ -1,0 +1,17 @@
+[
+  {
+    "Date": "2026-05-13T00:00:00+02:00",
+    "Hour": 3,
+    "ChangeType": {"Id": "2", "Name": "Substituted"},
+    "Description": "Supluje Mgr. Svobodová",
+    "Subject": {"Id": "sub-3", "Abbrev": "AJ", "Name": "Anglický jazyk"},
+    "Teacher": {"Id": "t-9", "Abbrev": "Svo", "Name": "Mgr. Svobodová"},
+    "Room": {"Id": "r-3", "Abbrev": "12"}
+  },
+  {
+    "Date": "2026-05-14T00:00:00+02:00",
+    "Hour": 1,
+    "ChangeType": {"Id": "1", "Name": "Removed"},
+    "Description": "Exkurze"
+  }
+]

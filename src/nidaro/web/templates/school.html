@@ -18,6 +18,12 @@
       No gather yet
       {% endif %}
     </span>
+    {% if kid %}
+    <form method="post" action="/school/refresh">
+      <input type="hidden" name="kid" value="{{ kid.id }}">
+      <button class="btn btn--ghost" type="submit">Gather now</button>
+    </form>
+    {% endif %}
   </div>
 
   {% if gather_error %}

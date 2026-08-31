@@ -7,6 +7,7 @@ from nidaro.calendar.service import CalendarService
 from nidaro.commitments.repository import CommitmentRepository
 from nidaro.commitments.service import CommitmentService
 from nidaro.config import get_settings
+from nidaro.connectors.bakalari import BakalariConnector
 from nidaro.connectors.crypto import SecretBox
 from nidaro.connectors.registry import ConnectorRegistry
 from nidaro.connectors.repository import (
@@ -56,13 +57,18 @@ class ApplicationServices:
 
     @classmethod
     def build(cls, sessions: async_sessionmaker[AsyncSession]) -> "ApplicationServices":
+        school = SchoolService(SchoolRepository(sessions))
+        credentials = ConnectorCredentialService(
+            ConnectorCredentialRepository(sessions), SecretBox.from_settings(get_settings())
+        )
         registry = ConnectorRegistry()
         registry.register(WhatsAppConnector(WhatsAppEventRepository(sessions)))
+        registry.register(BakalariConnector(credentials=credentials, school=school))
         return cls(
             household=HouseholdService(HouseholdRepository(sessions)),
             calendar=CalendarService(CalendarRepository(sessions), HouseholdRepository(sessions)),
             meals=MealsService(MealsRepository(sessions)),
-            school=SchoolService(SchoolRepository(sessions)),
+            school=school,
             tasks=TaskService(TaskRepository(sessions)),
             memory=MemoryService(FactRepository(sessions)),
             commitments=CommitmentService(CommitmentRepository(sessions)),
@@ -74,8 +80,6 @@ class ApplicationServices:
                 ConnectorCursorRepository(sessions),
                 ConnectorConfigRepository(sessions),
             ),
-            credentials=ConnectorCredentialService(
-                ConnectorCredentialRepository(sessions), SecretBox.from_settings(get_settings())
-            ),
+            credentials=credentials,
             connector_configs=ConnectorConfigService(ConnectorConfigRepository(sessions)),
         )

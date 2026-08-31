@@ -1,0 +1,40 @@
+{
+  "Days": [
+    {
+      "Id": "day-2026-05-13",
+      "Date": "2026-05-13T00:00:00+02:00",
+      "DayType": "WorkDay",
+      "Hours": [
+        {
+          "HourId": 1,
+          "Subject": {"Id": "sub-1", "Abbrev": "M", "Name": "Matematika"},
+          "Teacher": {"Id": "t-1", "Abbrev": "Vav", "Name": "Mgr. Vávrová"},
+          "Room": {"Id": "r-1", "Abbrev": "204"},
+          "Change": null
+        },
+        {
+          "HourId": 2,
+          "Subject": {"Id": "sub-2", "Abbrev": "TV", "Name": "Tělesná výchova"},
+          "Teacher": {"Id": "t-2", "Abbrev": "Kuc", "Name": "Mgr. Kučera"},
+          "Room": {"Id": "r-2", "Abbrev": "Tělocvična"},
+          "Change": {
+            "ChangeType": {"Id": "1", "Name": "Removed"},
+            "Description": "Kučera nemocný"
+          }
+        },
+        {
+          "HourId": 3,
+          "Subject": {"Id": "sub-3", "Abbrev": "AJ", "Name": "Anglický jazyk"},
+          "Teacher": {"Id": "t-3", "Abbrev": "Nov", "Name": "Mgr. Nováková"},
+          "Room": {"Id": "r-3", "Abbrev": "12"},
+          "Change": null
+        }
+      ]
+    }
+  ],
+  "Hours": [
+    {"Id": 1, "Caption": "1", "BeginTime": "08:00", "EndTime": "08:45"},
+    {"Id": 2, "Caption": "2", "BeginTime": "08:55", "EndTime": "09:40"},
+    {"Id": 3, "Caption": "3", "BeginTime": "09:50", "EndTime": "10:35"}
+  ]
+}

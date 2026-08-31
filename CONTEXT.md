@@ -67,6 +67,10 @@ A Czech school information system, second to Bakaláři. Observed for a future g
 One parent login at a Bakaláři server, bound to one kid. A household may hold several — in this family, each kid has their own parent account on the same server.
 _Avoid_: Bakaláři login (as the stored thing), child (the account is the linkage, not a child picked from a list)
 
+**Gather**:
+The school portal's read of a school system: log in, read what the school enables, land it, leave. Runs on a cadence and on demand from the school page; a failed gather changes nothing in Nidaro.
+_Avoid_: sync (code speech), import, scrape
+
 **Subject**:
 A school course a kid is taught, named by the school with a short code and a long name. The anchor the what-to-pack mapping keys on.
 _Avoid_: class (the kid's school class group, třída), course

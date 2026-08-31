@@ -1,0 +1,53 @@
+{
+  "Subjects": [
+    {
+      "Subject": {"Id": "sub-1", "Abbrev": "M", "Name": "Matematika"},
+      "Marks": [
+        {
+          "MarkId": "mark-1",
+          "MarkText": "1",
+          "Caption": "Písemka – rovnice",
+          "Theme": "Lineární rovnice",
+          "Teacher": "Mgr. Vávrová",
+          "Date": "2026-05-10T00:00:00+02:00",
+          "Points": 18.0,
+          "MaxPoints": 20.0,
+          "Weight": 2.0,
+          "Type": "Písemná práce",
+          "IsConfirmed": true
+        },
+        {
+          "MarkId": "mark-2",
+          "MarkText": "2-",
+          "Caption": "Ústní zkoušení",
+          "Theme": null,
+          "Teacher": "Mgr. Vávrová",
+          "Date": "2026-05-06T00:00:00+02:00",
+          "Points": null,
+          "MaxPoints": null,
+          "Weight": 1.0,
+          "Type": "Ústní zkoušení",
+          "IsConfirmed": false
+        }
+      ]
+    },
+    {
+      "Subject": {"Id": "sub-3", "Abbrev": "AJ", "Name": "Anglický jazyk"},
+      "Marks": [
+        {
+          "MarkId": "mark-3",
+          "MarkText": "85 %",
+          "Caption": "Vocabulary test",
+          "Theme": "Unit 12",
+          "Teacher": "Mgr. Nováková",
+          "Date": "2026-05-12T00:00:00+02:00",
+          "Points": 17.0,
+          "MaxPoints": 20.0,
+          "Weight": 3.0,
+          "Type": "Test",
+          "IsConfirmed": true
+        }
+      ]
+    }
+  ]
+}
