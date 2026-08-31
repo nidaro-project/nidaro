@@ -1,12 +1,13 @@
 """WhatsApp connector: drains the staging table into external records."""
 
 import hashlib
+from typing import Protocol
 from uuid import UUID
 
 from nidaro.connectors.base import StaleCursorError
 from nidaro.connectors.models import ConnectorContext, ExternalRecord, SyncResult
 from nidaro.connectors.whatsapp.models import WhatsAppEvent
-from nidaro.connectors.whatsapp.repository import DEFAULT_BATCH, WhatsAppEventRepository
+from nidaro.connectors.whatsapp.repository import DEFAULT_BATCH
 
 # A staged edit/revoke is a correction of a previously drained message, so
 # it rides as its own record type and downstream interpreters apply it
@@ -15,6 +16,16 @@ EDIT_EXTERNAL_TYPE = "message.edit"
 REVOKED_EXTERNAL_TYPE = "message.revoked"
 
 _EXTERNAL_TYPES = {"edit": EDIT_EXTERNAL_TYPE, "revoke": REVOKED_EXTERNAL_TYPE}
+
+
+class WhatsAppEventRepositoryProtocol(Protocol):
+    """What the drain needs from staging — satisfied by WhatsAppEventRepository."""
+
+    async def stage(self, event: WhatsAppEvent) -> WhatsAppEvent | None: ...
+
+    async def unprocessed(
+        self, household_id: UUID, after_id: int | None = None, limit: int = DEFAULT_BATCH
+    ) -> list[WhatsAppEvent]: ...
 
 
 class WhatsAppConnector:
@@ -33,7 +44,7 @@ class WhatsAppConnector:
 
     name = "whatsapp"
 
-    def __init__(self, events: WhatsAppEventRepository) -> None:
+    def __init__(self, events: WhatsAppEventRepositoryProtocol) -> None:
         self.events = events
 
     async def sync(self, context: ConnectorContext, cursor: str | None) -> SyncResult:
