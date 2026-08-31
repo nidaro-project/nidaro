@@ -9,6 +9,8 @@ repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 podman build --ignorefile "${repo}/deploy/.containerignore" \
   -t localhost/nidaro-prod:latest -f "${repo}/deploy/Containerfile" "${repo}"
+podman build -t localhost/nidaro-chromium:latest \
+  -f "${repo}/deploy/chromium.Containerfile" "${repo}/deploy"
 
 # Requires= makes the app units follow the migrate restart; they are listed
 # explicitly for clarity.

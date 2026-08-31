@@ -1,0 +1,21 @@
+# Persistent Chromium of the prod pod: headed under Xvfb, CDP on
+# pod-localhost:9222 (no published port — only pod members can reach it),
+# profile on a volume so the linked WhatsApp session survives restarts and
+# crashes. The WhatsApp observer attaches chrome-agent's CDPClient here.
+[Unit]
+Description=Nidaro prod persistent Chromium (CDP on pod-localhost:9222)
+
+[Container]
+Image=localhost/nidaro-chromium:latest
+Pod=nidaro-prod.pod
+ContainerName=nidaro-prod-chromium
+Volume=nidaro-prod-chromium-profile.volume:/data/profile
+ShmSize=1g
+Init=true
+
+[Service]
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

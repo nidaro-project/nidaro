@@ -17,6 +17,27 @@ services:
     volumes:
       - nidaro-redis:/data
 
+  # Persistent Chromium for the WhatsApp web bridge (development twin of the
+  # prod Quadlet unit). CDP is published on 127.0.0.1 only — the browser
+  # holds a linked WhatsApp session, so it must not be reachable from the
+  # network. The profile volume is what keeps the session alive across
+  # restarts; do not move it into the container filesystem.
+  chromium:
+    build:
+      context: deploy
+      dockerfile: chromium.Containerfile
+    init: true
+    ports:
+      # Chromium hard-codes CDP to 127.0.0.1 inside the container; the
+      # entrypoint's socat forwards it. Published to host loopback only —
+      # the browser holds a linked WhatsApp session.
+      - "127.0.0.1:9222:9223"
+    volumes:
+      - nidaro-chromium-profile:/data/profile
+    shm_size: 1g
+    restart: unless-stopped
+
 volumes:
   nidaro-postgres:
   nidaro-redis:
+  nidaro-chromium-profile:

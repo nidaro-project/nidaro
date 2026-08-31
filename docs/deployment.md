@@ -7,8 +7,8 @@ Taskiq scheduler talk to each other over `localhost`. The only published
 port is HTTP on `0.0.0.0:8100`: the UI shell is served at `/` (see
 [DESIGN.md](../DESIGN.md)), the API under `/api/v1`, and `/health` and
 `/ready` remain process/dependency checks. The development setup (compose
-on host ports 5432/6379, dev server on 8000) is not touched and can run in
-parallel.
+on host ports 5432/6379 plus the bridge browser on 127.0.0.1:9222, dev
+server on 8000) is not touched and can run in parallel.
 
 ## Prerequisites (one time)
 
@@ -64,6 +64,7 @@ podman pull docker.io/library/postgres:17-alpine docker.io/library/redis:8-alpin
 | `nidaro-prod-api.service` | `nidaro-prod-api` | uvicorn API on 8000 (published as 8100) |
 | `nidaro-prod-worker.service` | `nidaro-prod-worker` | Taskiq worker |
 | `nidaro-prod-scheduler.service` | `nidaro-prod-scheduler` | Taskiq scheduler (cron labels) |
+| `nidaro-prod-chromium.service` | `nidaro-prod-chromium` | Persistent Chromium (WhatsApp web bridge), CDP on pod-localhost:9222 |
 
 Start order is enforced by systemd: the database and Redis report "started"
 only when their healthchecks pass (`Notify=healthy`), the migration unit
@@ -86,6 +87,78 @@ journalctl --user -u nidaro-prod-migrate.service    # migration/seed output
 Static assets (CSS, JS, images) are served by the same uvicorn process
 from `/static/*`; they are part of the project wheel, so no extra image
 content or volume is needed.
+
+## The WhatsApp bridge browser
+
+The `nidaro-prod-chromium` unit runs a real, headed Chromium (under Xvfb,
+with a normal-Chrome user agent — WhatsApp's browser check gates on
+`HeadlessChrome`) inside the pod. It is the browser of the WhatsApp web
+bridge; the rationale and the PoC findings that forced this shape live in
+docs/research/whatsapp-integration.md §3.4.
+
+Properties that matter:
+
+- **The profile is a volume** (`systemd-nidaro-prod-chromium-profile`,
+  mounted at `/data/profile`). A WhatsApp device linked via QR survives
+  browser crashes, container restarts, and supervisor restarts. Deleting
+  the volume logs the device out; a new QR pairing is then needed. Never
+  move the profile into the container filesystem, and never manage this
+  browser with `chrome-agent launch`/`stop` — its registry wipes session
+  directories on stop.
+- **CDP on pod-localhost:9222, not published.** Only pod members (the
+  worker, the supervisor) can reach it. Chromium hard-codes the DevTools
+  server to `127.0.0.1`, so the image carries a small socat forwarder for
+  the published-port development setup; in the pod it is unused.
+- **No WhatsApp credentials in env or database.** The linked session IS
+  the credential; it lives only in the profile volume. Back it up like the
+  database volume (cold copy while the pod is stopped).
+
+The supervisor itself is `nidaro-chromium-supervisor` (console script over
+`nidaro.chromium.supervisor.ChromiumSupervisor`): it attaches
+chrome-agent's `CDPClient` to the browser-level WebSocket endpoint, pings
+`Browser.getVersion` every 10 s, and on failure reconnects with capped
+backoff until the browser service returns. The WhatsApp observer task will
+embed it in the worker; run standalone it is the smoke test for the whole
+path:
+
+```bash
+# attach logs the browser version; restart the chromium container and watch
+# "Lost Chromium" → backoff → "Attached to Chromium" again
+podman exec nidaro-prod-api nidaro-chromium-supervisor   # or: uv run nidaro-chromium-supervisor
+```
+
+### QR pairing (once per install, needs the sacrificial number)
+
+The browser opens web.whatsapp.com on start. Grab the login QR as a CDP
+screenshot — from a dev checkout against the published port, or from the
+API container (chrome-agent is a nidaro dependency) in prod — and scan it
+with the sacrificial phone:
+
+```bash
+podman exec nidaro-prod-api python - <<'EOF' > qr.png
+import asyncio, base64, sys
+from chrome_agent.cdp_client import CDPClient, get_ws_url
+
+async def main():
+    url = await asyncio.to_thread(get_ws_url, 9222, "page")
+    async with CDPClient(ws_url=url) as cdp:
+        await cdp.send("Page.enable")
+        await cdp.send("Runtime.enable")
+        page = await cdp.send("Runtime.evaluate", {"expression": "location.href", "returnByValue": True})
+        await cdp.send("Page.navigate", {"url": page["result"]["value"]})
+        await asyncio.sleep(8)  # let the QR frame render
+        info = await cdp.send("Page.captureScreenshot", {"format": "png"})
+        sys.stdout.buffer.write(base64.b64decode(info["data"]))
+
+asyncio.run(main())
+EOF
+```
+
+The QR refreshes periodically; re-run until the scan takes. Afterwards
+"Linked devices" on the phone should list the session, and the profile
+volume holds it across restarts. (Verified end to end on 2026-08-31
+against the compose container: the login page renders fully under Xvfb
+with the spoofed UA, and `Page.captureScreenshot` captures the QR frame.)
 
 Use `journalctl --user -u <unit>`, not `podman logs`: containers are
 re-created on every restart, and only journald keeps the history.
@@ -158,8 +231,12 @@ for a consistent snapshot):
 ```bash
 systemctl --user stop nidaro-prod-pod.service
 podman volume export systemd-nidaro-prod-pgdata -o pgdata.tar
+podman volume export systemd-nidaro-prod-chromium-profile -o chromium-profile.tar
 systemctl --user start nidaro-prod-pod.service
 ```
+
+The Chromium profile volume holds the linked WhatsApp session — without a
+backup, losing it means a new QR pairing for the bridge.
 
 ## Teardown
 
