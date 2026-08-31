@@ -7,6 +7,7 @@ from nidaro.calendar.service import CalendarService
 from nidaro.commitments.repository import CommitmentRepository
 from nidaro.commitments.service import CommitmentService
 from nidaro.connectors.registry import ConnectorRegistry
+from nidaro.connectors.repository import ConnectorCursorRepository
 from nidaro.connectors.service import ConnectorService
 from nidaro.conversations.repository import ConversationRepository
 from nidaro.conversations.service import ConversationService
@@ -52,5 +53,5 @@ class ApplicationServices:
             sources=SourceService(SourceRepository(sessions)),
             conversations=ConversationService(ConversationRepository(sessions)),
             jobs=JobService(sessions),
-            connectors=ConnectorService(ConnectorRegistry()),
+            connectors=ConnectorService(ConnectorRegistry(), ConnectorCursorRepository(sessions)),
         )

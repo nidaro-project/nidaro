@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from nidaro.calendar import models as _calendar_models
 from nidaro.commitments import models as _commitment_models
 from nidaro.config import get_settings
+from nidaro.connectors import models as _connector_models
 from nidaro.conversations import models as _conversation_models
 from nidaro.db.base import Base
 from nidaro.household import models as _household_models
@@ -19,6 +20,7 @@ from nidaro.tasks import models as _task_models
 _model_modules = (
     _calendar_models,
     _commitment_models,
+    _connector_models,
     _conversation_models,
     _household_models,
     _job_models,
