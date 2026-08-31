@@ -10,6 +10,7 @@ call `ensure_full_metadata` before touching the database.
 from nidaro.calendar import models as calendar_models
 from nidaro.commitments import models as commitments_models
 from nidaro.connectors import models as connectors_models
+from nidaro.connectors.whatsapp import models as whatsapp_models
 from nidaro.conversations import models as conversations_models
 from nidaro.db.base import Base
 from nidaro.household import models as household_models
@@ -30,6 +31,7 @@ _MODEL_MODULES = (
     memory_models,
     sources_models,
     tasks_models,
+    whatsapp_models,
 )
 
 
