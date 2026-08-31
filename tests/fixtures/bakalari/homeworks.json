@@ -1,0 +1,28 @@
+{
+  "Homeworks": [
+    {
+      "Id": "hw-1",
+      "Content": "Vocabulary unit 12",
+      "DateStart": "2026-05-12T00:00:00+02:00",
+      "DateEnd": "2026-05-15T00:00:00+02:00",
+      "Done": false,
+      "Closed": false,
+      "Electronic": false,
+      "Subject": {"Id": "sub-3", "Abbrev": "AJ", "Name": "Anglický jazyk"},
+      "Teacher": {"Id": "t-3", "Abbrev": "Nov", "Name": "Mgr. Nováková"},
+      "Attachments": [{"Id": "att-1", "Name": "wordlist.pdf", "Type": "pdf"}]
+    },
+    {
+      "Id": "hw-2",
+      "Content": "Dokončit sešit str. 34",
+      "DateStart": "2026-05-13T00:00:00+02:00",
+      "DateEnd": null,
+      "Done": false,
+      "Closed": false,
+      "Electronic": false,
+      "Subject": {"Id": "sub-1", "Abbrev": "M", "Name": "Matematika"},
+      "Teacher": {"Id": "t-1", "Abbrev": "Vav", "Name": "Mgr. Vávrová"},
+      "Attachments": []
+    }
+  ]
+}

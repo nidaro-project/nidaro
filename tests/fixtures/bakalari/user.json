@@ -1,0 +1,26 @@
+{
+  "UserId": "Uqef8x2A",
+  "UserType": "parents",
+  "UserTypeText": "rodič",
+  "FirstName": "Jana",
+  "LastName": "Nováková",
+  "School": "ZŠ Ukázka",
+  "Class": "6.A",
+  "EnabledModules": {
+    "Komens": {
+      "Rights": {
+        "ShowReceivedMessages": true,
+        "ShowSentMessages": true,
+        "ShowNoticeBoardMessages": true,
+        "SendMessages": false
+      }
+    },
+    "Marks": {"Rights": {"ShowMarks": true, "ShowFinalMarks": true}},
+    "Timetable": true,
+    "Substitutions": true,
+    "Homeworks": {"Rights": {"ShowHomeworks": true}},
+    "Absence": {"Rights": {"ShowAbsence": true}},
+    "Events": true,
+    "Subjects": {"Rights": {"ShowSubjects": true}}
+  }
+}

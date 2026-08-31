@@ -1,0 +1,15 @@
+{
+  "UserId": "Uqef8x2A",
+  "UserType": "parents",
+  "UserTypeText": "rodič",
+  "FirstName": "Jana",
+  "LastName": "Nováková",
+  "School": "ZŠ Ukázka",
+  "Class": "6.A",
+  "EnabledModules": {
+    "Komens": {"Rights": {"ShowReceivedMessages": true}},
+    "Marks": {"Rights": {"ShowMarks": false}},
+    "Absence": {"Rights": {"ShowAbsence": true}},
+    "Events": true
+  }
+}
