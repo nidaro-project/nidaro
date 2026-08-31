@@ -9,3 +9,5 @@ __pycache__/
 .coverage
 htmlcov/
 .rohrpost/tickets.jsonl
+docs/retros/**.log
+docs/retros/**.json
