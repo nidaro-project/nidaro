@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     model: str | None = None
     logfire_token: str | None = None
     timezone: str = "Europe/Prague"
+    # Connector secret encryption (Fernet). The previous keys stay decryptable
+    # while a rotation is in flight — see docs/deployment.md.
+    credential_key: str | None = None
+    credential_previous_keys: str = ""
 
     model_config = SettingsConfigDict(
         env_prefix="NIDARO_",

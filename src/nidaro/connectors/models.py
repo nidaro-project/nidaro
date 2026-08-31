@@ -55,3 +55,23 @@ class ConnectorCursor(TimestampMixin, Base):
     household_id: Mapped[UUID] = mapped_column(ForeignKey("households.id"), index=True)
     connector: Mapped[str] = mapped_column(String(100))
     cursor: Mapped[str] = mapped_column(Text)
+
+
+class ConnectorCredential(TimestampMixin, Base):
+    """One named secret for one connector in one household, stored encrypted.
+
+    `secret` holds a Fernet token produced by `SecretBox`; plaintext exists
+    only in memory on its way through `ConnectorCredentialService` and is
+    never written, logged, or migrated. `name` distinguishes several
+    credentials per connector (one Bakaláři account per kid, an OAuth
+    refresh token next to an app-specific password).
+    """
+
+    __tablename__ = "connector_credentials"
+    __table_args__ = (UniqueConstraint("household_id", "connector", "name"),)
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
+    household_id: Mapped[UUID] = mapped_column(ForeignKey("households.id"), index=True)
+    connector: Mapped[str] = mapped_column(String(100))
+    name: Mapped[str] = mapped_column(String(100))
+    secret: Mapped[str] = mapped_column(Text)

@@ -6,9 +6,11 @@ from nidaro.calendar.repository import CalendarRepository
 from nidaro.calendar.service import CalendarService
 from nidaro.commitments.repository import CommitmentRepository
 from nidaro.commitments.service import CommitmentService
+from nidaro.config import get_settings
+from nidaro.connectors.crypto import SecretBox
 from nidaro.connectors.registry import ConnectorRegistry
-from nidaro.connectors.repository import ConnectorCursorRepository
-from nidaro.connectors.service import ConnectorService
+from nidaro.connectors.repository import ConnectorCredentialRepository, ConnectorCursorRepository
+from nidaro.connectors.service import ConnectorCredentialService, ConnectorService
 from nidaro.conversations.repository import ConversationRepository
 from nidaro.conversations.service import ConversationService
 from nidaro.household.repository import HouseholdRepository
@@ -39,6 +41,7 @@ class ApplicationServices:
     conversations: ConversationService
     jobs: JobService
     connectors: ConnectorService
+    credentials: ConnectorCredentialService
 
     @classmethod
     def build(cls, sessions: async_sessionmaker[AsyncSession]) -> "ApplicationServices":
@@ -54,4 +57,7 @@ class ApplicationServices:
             conversations=ConversationService(ConversationRepository(sessions)),
             jobs=JobService(sessions),
             connectors=ConnectorService(ConnectorRegistry(), ConnectorCursorRepository(sessions)),
+            credentials=ConnectorCredentialService(
+                ConnectorCredentialRepository(sessions), SecretBox.from_settings(get_settings())
+            ),
         )

@@ -113,6 +113,39 @@ Configuration is read once per process at container start (`get_settings()`
 is cached). Note that `POSTGRES_PASSWORD` applies only when the data volume
 is initialized; changing it later does not change the database password.
 
+### Rotating the connector credential key
+
+Connector secrets (Bakaláři passwords, OAuth refresh tokens, app-specific
+passwords) are stored in PostgreSQL as Fernet ciphertext keyed by
+`NIDARO_CREDENTIAL_KEY`. Plaintext never reaches the database, so statement
+logs, `pg_dump` output, and migrations carry no secrets. To rotate the key
+without losing access:
+
+1. Generate a new key:
+
+   ```bash
+   uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ```
+
+2. In `~/.config/nidaro/prod.env`, set `NIDARO_CREDENTIAL_KEY` to the new key
+   and list the old one in `NIDARO_CREDENTIAL_PREVIOUS_KEYS` (comma-separated
+   when more than one old key is still in flight). Stored ciphertext stays
+   decryptable through the fallback keys.
+3. Restart the pod (`systemctl --user restart nidaro-prod-pod.service`) and
+   re-encrypt every stored secret under the new primary key:
+
+   ```bash
+   podman exec nidaro-prod-api nidaro-rotate-credentials
+   ```
+
+4. Remove the old key from `NIDARO_CREDENTIAL_PREVIOUS_KEYS` and restart the
+   pod again. From here on only the new key can read the stored secrets.
+
+A row that no longer matches any configured key makes
+`nidaro-rotate-credentials` fail with the row's connector/name/household —
+never the secret itself. The affected credential must be re-entered
+(`set` through the service seam) and the rotation re-run.
+
 ## Data backup
 
 ```bash
