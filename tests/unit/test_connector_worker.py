@@ -213,9 +213,7 @@ async def test_connector_run_for_unknown_household_is_reported():
 @pytest.mark.anyio
 async def test_sweep_runs_every_due_config_and_isolates_failures():
     failing = ScriptedConnector(error=RuntimeError("Google is down"))
-    config_repository = FakeConfigRepository(
-        [config_row(), config_row(household_id=HOUSEHOLD_ID)]
-    )
+    config_repository = FakeConfigRepository([config_row(), config_row(household_id=HOUSEHOLD_ID)])
     services, _calendar = make_services(failing, config_repository)
 
     result = await run_due_connector_syncs(services)
