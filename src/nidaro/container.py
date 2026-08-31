@@ -8,6 +8,7 @@ from nidaro.commitments.repository import CommitmentRepository
 from nidaro.commitments.service import CommitmentService
 from nidaro.config import get_settings
 from nidaro.connectors.crypto import SecretBox
+from nidaro.connectors.icloud_calendar import IcloudCalendarConnector
 from nidaro.connectors.registry import ConnectorRegistry
 from nidaro.connectors.repository import (
     ConnectorConfigRepository,
@@ -34,6 +35,13 @@ from nidaro.sources.repository import SourceRepository
 from nidaro.sources.service import SourceService
 from nidaro.tasks.repository import TaskRepository
 from nidaro.tasks.service import TaskService
+
+
+def _connector_registry() -> ConnectorRegistry:
+    """Every built-in connector, registered once at container build time."""
+    registry = ConnectorRegistry()
+    registry.register(IcloudCalendarConnector())
+    return registry
 
 
 @dataclass(frozen=True)
@@ -66,7 +74,7 @@ class ApplicationServices:
             conversations=ConversationService(ConversationRepository(sessions)),
             jobs=JobService(sessions),
             connectors=ConnectorService(
-                ConnectorRegistry(),
+                _connector_registry(),
                 ConnectorCursorRepository(sessions),
                 ConnectorConfigRepository(sessions),
             ),
