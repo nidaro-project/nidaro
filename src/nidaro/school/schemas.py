@@ -1,7 +1,7 @@
 from datetime import date, datetime, time
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class SubjectInput(BaseModel):
@@ -47,6 +47,12 @@ class SubjectView(BaseModel):
     code: str
     name: str
     teacher: str | None
+    equipment: list[str] = []
+
+    @field_validator("equipment", mode="before")
+    @classmethod
+    def none_is_empty(cls, value: list[str] | None) -> list[str]:
+        return value or []
 
 
 class LessonView(BaseModel):
@@ -101,3 +107,14 @@ class AppliedDay(BaseModel):
     day: date
     member_id: UUID
     lessons: list[LessonView]
+
+
+class PackItemView(BaseModel):
+    subject_code: str
+    subject_name: str
+    items: list[str]
+
+
+class PackDayView(BaseModel):
+    day: date
+    entries: list[PackItemView]

@@ -1,0 +1,47 @@
+{# What to pack: derived on read (materialized lessons + subject equipment). HTMX actions swap #packing. #}
+<section class="card" id="packing">
+  <div class="card__head"><span class="card__title dot dot--school">What to pack</span></div>
+  <div class="card__body">
+    <div class="sp-pack-grid">
+      <div>
+        <p class="sp-pack-day">Today · {{ today.strftime("%a %d. %m.") }}</p>
+        {% set with_items = pack_today | selectattr("items") | list %}
+        {% if with_items %}
+        {% for e in with_items %}
+        <div class="sp-pack-item"><strong>{{ e.items | join(" + ") }}</strong> — {{ e.subject_name }}</div>
+        {% endfor %}
+        {% else %}
+        <p class="school-empty">Nothing special today.</p>
+        {% endif %}
+      </div>
+      <div>
+        <p class="sp-pack-day">Tomorrow · {{ tomorrow.strftime("%a %d. %m.") }}</p>
+        {% set with_items = pack_tomorrow | selectattr("items") | list %}
+        {% if with_items %}
+        {% for e in with_items %}
+        <div class="sp-pack-item"><strong>{{ e.items | join(" + ") }}</strong> — {{ e.subject_name }}</div>
+        {% endfor %}
+        {% else %}
+        <p class="school-empty">Nothing special tomorrow.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if kid %}
+    <div class="sp-pack-editor">
+      <p class="school-meta">What this kid carries per subject — one item per line.</p>
+      {% for s in subjects %}
+      <details>
+        <summary>{{ s.name }} <span class="school-meta">({{ s.code }})</span>
+          {% if s.equipment %}<span class="badge">{{ s.equipment | length }}</span>{% endif %}
+        </summary>
+        <form hx-post="/school/subjects/{{ s.id }}/equipment?kid={{ kid.id }}" hx-target="#packing" hx-swap="outerHTML">
+          <textarea name="items" rows="2" placeholder="Gym kit&#10;Flute">{{ s.equipment | join("\n") }}</textarea>
+          <button class="btn btn--primary" type="submit">Save</button>
+        </form>
+      </details>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>

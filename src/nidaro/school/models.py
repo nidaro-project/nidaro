@@ -23,6 +23,7 @@ class Subject(TimestampMixin, Base):
     code: Mapped[str] = mapped_column(String(20))
     name: Mapped[str] = mapped_column(String(250))
     teacher: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    equipment: Mapped[list[Any]] = mapped_column(JSONB, default=list)
 
 
 class Lesson(TimestampMixin, Base):

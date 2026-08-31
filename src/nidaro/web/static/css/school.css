@@ -36,3 +36,14 @@
   .sp-grid { grid-template-columns: 1fr; }
   .sp-kids { position: static; flex-direction: row; flex-wrap: wrap; }
 }
+
+.sp-pack-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--space-lg); }
+.sp-pack-day { margin: 0 0 var(--space-2xs); font-weight: 700; color: var(--color-text); font-size: var(--text-sm); }
+.sp-pack-item { padding: var(--space-2xs) 0; font-size: var(--text-sm); color: var(--color-text); }
+.sp-pack-editor { margin-top: var(--space-lg); border-top: 1px solid var(--color-line); padding-top: var(--space-md); display: flex; flex-direction: column; gap: var(--space-2xs); }
+.sp-pack-editor details { padding: var(--space-2xs) 0; }
+.sp-pack-editor summary { cursor: pointer; font-weight: 600; color: var(--color-text); font-size: var(--text-sm); }
+.sp-pack-editor form { display: flex; gap: var(--space-sm); align-items: flex-start; margin-top: var(--space-2xs); }
+.sp-pack-editor textarea { flex: 1; font: inherit; font-size: var(--text-sm); color: var(--color-text);
+                           background: var(--color-surface-2); border: 1px solid var(--color-line);
+                           border-radius: var(--radius-md); padding: var(--space-2xs) var(--space-sm); }

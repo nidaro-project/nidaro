@@ -71,6 +71,19 @@ class SchoolRepository:
                 await session.refresh(row, ["subject"])
             return rows
 
+    async def update_equipment(
+        self, member_id: UUID, subject_id: UUID, equipment: list[str]
+    ) -> Subject | None:
+        async with self.sessions.begin() as session:
+            row = await session.scalar(
+                select(Subject).where(Subject.id == subject_id, Subject.member_id == member_id)
+            )
+            if row is None:
+                return None
+            row.equipment = list(equipment)
+            await session.flush()
+            return row
+
     async def lessons_on(self, member_id: UUID, day: date) -> list[Lesson]:
         async with self.sessions() as session:
             result = await session.scalars(

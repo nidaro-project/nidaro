@@ -149,6 +149,13 @@ class FakeSchoolRepository(SchoolRepository):
             key=lambda r: (r.due_on is None, r.due_on or date.max, r.created_at),
         )
 
+    async def update_equipment(self, member_id, subject_id, equipment):
+        for row in self.subjects.values():
+            if row.id == subject_id and row.member_id == member_id:
+                row.equipment = list(equipment)
+                return row
+        return None
+
 
 def _household_with_kids():
     household = Household(
@@ -326,5 +333,80 @@ def test_unknown_kid_falls_back_to_first_child():
 def test_page_without_seeded_household_404s():
     client = _client(_services(None, FakeSchoolRepository()))
     response = client.get("/school")
+
+    assert response.status_code == 404
+
+
+def test_packing_card_renders_subject_editors():
+    household = _household_with_kids()
+    anna = household.members[1]
+    school_repo = FakeSchoolRepository()
+
+    import asyncio
+
+    async def land():
+        await SchoolService(school_repo).apply_day(
+            anna.id,
+            household.id,
+            DAY,
+            [_lesson(1), _lesson(2, code="TV", canceled=True, substitution="Canceled today")],
+        )
+
+    asyncio.run(land())
+
+    response = _client(_services(household, school_repo)).get(f"/school?kid={anna.id}")
+    body = response.text
+
+    assert 'id="packing"' in body
+    assert "What to pack" in body
+    assert "Nothing special today." in body
+    assert "one item per line" in body
+
+
+def test_saving_equipment_updates_the_packing_card():
+    household = _household_with_kids()
+    anna = household.members[1]
+    school_repo = FakeSchoolRepository()
+
+    import asyncio
+
+    async def land():
+        await SchoolService(school_repo).apply_day(
+            anna.id, household.id, DAY, [_lesson(2, code="TV")]
+        )
+
+    asyncio.run(land())
+    client = _client(_services(household, school_repo))
+    subject_id = school_repo.lessons[(anna.id, DAY)][0].subject_id
+
+    redirected = client.post(
+        f"/school/subjects/{subject_id}/equipment",
+        data={"kid": str(anna.id), "items": "Gym kit\nWater bottle"},
+        follow_redirects=False,
+    )
+    assert redirected.status_code == 303
+
+    page = client.get(f"/school?kid={anna.id}")
+    assert "Gym kit" in page.text
+    assert "Water bottle" in page.text
+
+    fragment = client.post(
+        f"/school/subjects/{subject_id}/equipment?kid={anna.id}",
+        data={"kid": str(anna.id), "items": "Gym kit"},
+        headers={"HX-Request": "true"},
+    )
+    assert "Gym kit" in fragment.text
+    assert "Water bottle" not in fragment.text
+
+
+def test_saving_equipment_for_foreign_subject_404s():
+    household = _household_with_kids()
+    anna = household.members[1]
+    client = _client(_services(household, FakeSchoolRepository()))
+
+    response = client.post(
+        f"/school/subjects/{uuid4()}/equipment",
+        data={"kid": str(anna.id), "items": "Gym kit"},
+    )
 
     assert response.status_code == 404

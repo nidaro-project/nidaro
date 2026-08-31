@@ -10,6 +10,8 @@ from nidaro.school.schemas import (
     HomeworkView,
     LessonInput,
     LessonView,
+    PackDayView,
+    PackItemView,
     SubjectInput,
     SubjectView,
 )
@@ -43,6 +45,10 @@ class SchoolRepositoryProtocol(Protocol):
     ) -> Homework: ...
 
     async def homework_for_member(self, member_id: UUID) -> list[Homework]: ...
+
+    async def update_equipment(
+        self, member_id: UUID, subject_id: UUID, equipment: list[str]
+    ) -> Subject | None: ...
 
 
 class SchoolService:
@@ -104,3 +110,29 @@ class SchoolService:
             HomeworkView.model_validate(h)
             for h in await self.repository.homework_for_member(member_id)
         ]
+
+    async def set_equipment(
+        self, member_id: UUID, subject_id: UUID, equipment: list[str]
+    ) -> SubjectView | None:
+        row = await self.repository.update_equipment(member_id, subject_id, equipment)
+        return SubjectView.model_validate(row) if row else None
+
+    async def pack_list(self, member_id: UUID, days: list[date]) -> list[PackDayView]:
+        """Derived, never stored: live lessons per day joined with subject equipment."""
+        packing: list[PackDayView] = []
+        for day in days:
+            entries: list[PackItemView] = []
+            seen: set[UUID | None] = set()
+            for lesson in await self.repository.lessons_on(member_id, day):
+                if lesson.canceled or lesson.subject_id in seen:
+                    continue
+                seen.add(lesson.subject_id)
+                entries.append(
+                    PackItemView(
+                        subject_code=lesson.subject.code if lesson.subject else "?",
+                        subject_name=lesson.subject.name if lesson.subject else "Subject",
+                        items=list(lesson.subject.equipment or []) if lesson.subject else [],
+                    )
+                )
+            packing.append(PackDayView(day=day, entries=entries))
+        return packing
