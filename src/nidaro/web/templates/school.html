@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% import "components/icons.html" as icons %}
+{# School portal: per-kid information reads (Today at school, Grades, Homework). Variant B shape from [portal-4]. #}
+{% block title %}School · nidaro{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static/css/school.css">
+
+<div style="display:flex; flex-direction:column; gap: var(--space-lg);">
+  <div class="sp-head">
+    <h2 class="sp-title">School</h2>
+    {% if kid %}
+    <span class="sp-meta">{{ kid.name }} · {{ kid.role }}</span>
+    {% endif %}
+    <span class="sp-fresh">
+      {% if lessons or grades or homework %}
+      Data updated {{ (lessons or grades or homework)[0].updated_at.strftime("%d. %m. %H:%M") }}
+      {% else %}
+      No gather yet
+      {% endif %}
+    </span>
+  </div>
+
+  {% if gather_error %}
+  <div class="sp-err">{{ gather_error }}</div>
+  {% endif %}
+
+  <div class="sp-grid">
+    <aside class="sp-kids">
+      {% for k in kids %}
+      <a class="sp-kid" href="/school?kid={{ k.id }}" {% if kid and k.id == kid.id %}aria-current="page"{% endif %}>
+        <span class="avatar avatar--{{ loop.index0 % 4 }}"></span>
+        <span><strong>{{ k.name }}</strong><br><span class="sp-meta">{{ k.role }}</span></span>
+      </a>
+      {% endfor %}
+    </aside>
+
+    <div class="sp-stacks">
+      {% if kid is none %}
+      <section class="card">
+        <div class="card__head"><span class="card__title dot dot--school">No kids yet</span></div>
+        <div class="card__body"><p class="sp-empty">Add children to the household to follow their school days.</p></div>
+      </section>
+      {% else %}
+      <section class="card">
+        <div class="card__head"><span class="card__title dot dot--school">Today at school — {{ today.strftime("%A %d. %m.") }}</span></div>
+        <div class="card__body">
+          {% if lessons %}
+          {% set next = lessons | selectattr("canceled", "equalto", false) | first %}
+          {% for l in lessons %}
+          <div class="sp-row{% if l.canceled %} sp-row--dead{% endif %}">
+            <span class="sp-time">{{ l.start.strftime("%H:%M") }}–{{ l.end.strftime("%H:%M") }}</span>
+            <span>
+              <span class="sp-subject">{{ l.subject.name if l.subject else "Subject" }}</span>
+              {% if l.canceled %}<span class="sp-sub-badge sp-sub-badge--canceled">Canceled</span>
+              {% elif l.substitution %}<span class="sp-sub-badge">{{ l.substitution }}</span>{% endif %}
+              {% if next and l.id == next.id %}<span class="sp-next">next up</span>{% endif %}
+              <div class="sp-meta">{{ l.teacher }}{% if l.teacher and l.room %} · {% endif %}{{ l.room }}</div>
+            </span>
+          </div>
+          {% endfor %}
+          {% else %}
+          <p class="sp-empty">No school data yet — Nidaro shows the day once the gatherer has run.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__head"><span class="card__title">Grades</span></div>
+        <div class="card__body">
+          {% if grades %}
+          {% for g in grades %}
+          <div class="sp-row">
+            <span class="sp-grade">{{ g.value }}</span>
+            <span>
+              <span class="sp-subject">{{ g.subject.name if g.subject else "Subject" }}</span>
+              {% if not g.confirmed %}<span class="sp-sub-badge">not confirmed</span>{% endif %}
+              <div class="sp-meta">{{ g.graded_on.strftime("%d. %m.") }} · weight {{ g.weight }}</div>
+            </span>
+          </div>
+          {% endfor %}
+          {% else %}
+          <p class="sp-empty">No grades yet.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__head"><span class="card__title">Homework</span></div>
+        <div class="card__body">
+          {% if homework %}
+          {% for h in homework %}
+          <div class="sp-row">
+            <span class="sp-subject">{{ h.subject.name if h.subject else "Subject" }}</span>
+            <span>
+              <span class="sp-meta">{{ h.text }}</span>
+              {% if h.attachments %}<div class="sp-meta">📎 {{ h.attachments | join(", ") }}</div>{% endif %}
+            </span>
+            {% if h.due_on %}<span class="badge" style="margin-left:auto">due {{ h.due_on.strftime("%a %d. %m.") }}</span>{% endif %}
+          </div>
+          {% endfor %}
+          {% else %}
+          <p class="sp-empty">Nothing due — all clear.</p>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

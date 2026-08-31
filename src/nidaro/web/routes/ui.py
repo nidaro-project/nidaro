@@ -23,9 +23,11 @@ NAV_ITEMS: tuple[tuple[str, str, str], ...] = (
     ("settings", "Settings", "gear"),
 )
 
-# Placeholder sections have no route of their own yet; home and settings render.
+# Placeholder sections have no route of their own yet; home, school, settings render.
 SECTIONS = {
-    slug: (label, icon) for slug, label, icon in NAV_ITEMS if slug not in {"home", "settings"}
+    slug: (label, icon)
+    for slug, label, icon in NAV_ITEMS
+    if slug not in {"home", "settings", "school"}
 }
 
 THEMES: tuple[dict[str, Any], ...] = (

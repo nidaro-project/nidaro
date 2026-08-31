@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date, datetime, time
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -52,6 +52,8 @@ class SubjectView(BaseModel):
 class LessonView(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    updated_at: datetime
+
     id: UUID
     member_id: UUID
     day: date
@@ -68,6 +70,8 @@ class LessonView(BaseModel):
 class GradeView(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    updated_at: datetime
+
     id: UUID
     member_id: UUID
     external_id: str
@@ -81,6 +85,8 @@ class GradeView(BaseModel):
 
 class HomeworkView(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
+    updated_at: datetime
 
     id: UUID
     member_id: UUID
