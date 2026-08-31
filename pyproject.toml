@@ -8,6 +8,8 @@ license = "AGPL-3.0-only"
 authors = [{ name = "Nidaro contributors" }]
 dependencies = [
   "alembic>=1.16,<2",
+  "caldav>=3.2,<4",
+  "icalendar>=7.3,<8",
   "cryptography>=44,<51",
   "fastapi>=0.116,<1",
   "httpx>=0.28,<1",
@@ -39,6 +41,12 @@ nidaro-rotate-credentials = "nidaro.rotate:main"
 [tool.pytest.ini_options]
 markers = [
   "integration: tests that need PostgreSQL or Redis infrastructure",
+]
+filterwarnings = [
+  # icalendar warns when it *guesses* a vendor-prefixed TZID at parse time;
+  # nidaro decodes those values itself (connectors/icloud_ics) and never
+  # relies on the guess, so the library's heads-up is noise here.
+  "ignore:Timezone .* is a globally unique TZID:UserWarning",
 ]
 
 [tool.uv]
