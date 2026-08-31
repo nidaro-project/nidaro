@@ -1,0 +1,5 @@
+# WhatsApp session profile of the prod Chromium. Podman volume name:
+# systemd-nidaro-prod-chromium-profile. Destroying this volume logs the
+# linked device out and a new QR pairing is needed.
+[Volume]
+Label=app=nidaro env=prod

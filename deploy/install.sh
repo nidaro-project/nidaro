@@ -15,6 +15,10 @@ echo "Building ${image}"
 podman build --ignorefile "${repo}/deploy/.containerignore" \
   -t "${image}" -f "${repo}/deploy/Containerfile" "${repo}"
 
+echo "Building localhost/nidaro-chromium:latest"
+podman build -t localhost/nidaro-chromium:latest \
+  -f "${repo}/deploy/chromium.Containerfile" "${repo}/deploy"
+
 mkdir -p "$(dirname "${env_file}")" "${quadlet_dir}"
 if [[ ! -f "${env_file}" ]]; then
   install -m 600 "${repo}/deploy/env.prod.example" "${env_file}"

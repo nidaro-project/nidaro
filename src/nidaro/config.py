@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     # while a rotation is in flight — see docs/deployment.md.
     credential_key: str | None = None
     credential_previous_keys: str = ""
+    # CDP endpoint of the persistent Chromium (see nidaro.chromium and
+    # docs/deployment.md). The browser is reached over pod-localhost in prod
+    # and over a 127.0.0.1-published port in development, so only the port
+    # is configurable.
+    chromium_cdp_port: int = 9222
 
     model_config = SettingsConfigDict(
         env_prefix="NIDARO_",

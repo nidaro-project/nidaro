@@ -8,6 +8,7 @@ license = "AGPL-3.0-only"
 authors = [{ name = "Nidaro contributors" }]
 dependencies = [
   "alembic>=1.16,<2",
+  "chrome-agent>=0.5.8,<0.6",
   "cryptography>=44,<51",
   "fastapi>=0.116,<1",
   "httpx>=0.28,<1",
@@ -35,6 +36,7 @@ dev = [
 [project.scripts]
 nidaro-seed = "nidaro.seed:main"
 nidaro-rotate-credentials = "nidaro.rotate:main"
+nidaro-chromium-supervisor = "nidaro.chromium.cli:main"
 
 [tool.pytest.ini_options]
 markers = [
