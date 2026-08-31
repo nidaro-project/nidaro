@@ -46,3 +46,27 @@ class EventView(BaseModel):
 
 class UpcomingEvents(BaseModel):
     events: list[EventView] = []
+
+
+class ExternalEventPayload(BaseModel):
+    """Fields a live `external_type="calendar_event"` record must carry.
+
+    The connector resolves source-specific shapes (Google event JSON, iCalendar
+    properties, school-portal entries) into this contract; `model_dump()` maps
+    one-to-one onto the writable columns of a mirrored `Event`.
+    """
+
+    title: str
+    starts_at: datetime
+    ends_at: datetime | None = None
+    description: str | None = None
+    location: str | None = None
+    is_all_day: bool = False
+
+
+class MirrorApplyReport(BaseModel):
+    """What one `apply_external_records` batch did to the calendar mirrors."""
+
+    applied: int = 0
+    removed: int = 0
+    skipped: int = 0

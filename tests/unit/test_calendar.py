@@ -8,6 +8,8 @@ from nidaro.calendar.models import Event
 from nidaro.calendar.repository import CalendarRepository
 from nidaro.calendar.schemas import CreateEventRequest, EventView
 from nidaro.calendar.service import CalendarService
+from nidaro.connectors.models import ExternalRecord
+from nidaro.db.types import new_uuid, utc_now
 from nidaro.household.models import FamilyMember
 from nidaro.household.repository import HouseholdRepository
 
@@ -42,6 +44,62 @@ class FakeEventRepository(CalendarRepository):
 
     async def upcoming(self, household_id, days=7):
         return []
+
+
+class FakeMirrorRepository(CalendarRepository):
+    """Serves the external-mirror seam; identity lookups in Python."""
+
+    def __init__(self):
+        self.events = []
+
+    async def upsert_mirror(self, household_id, connector, external_id, fields):
+        event = next(
+            (e for e in self.events if self._identity(e) == (household_id, connector, external_id)),
+            None,
+        )
+        if event is None:
+            event = Event(
+                id=new_uuid(),
+                household_id=household_id,
+                external_connector=connector,
+                external_id=external_id,
+                status="scheduled",
+                created_at=utc_now(),
+                updated_at=utc_now(),
+                **fields,
+            )
+            self.events.append(event)
+        else:
+            for name, value in fields.items():
+                setattr(event, name, value)
+        return event
+
+    async def remove_mirror(self, household_id, connector, external_id):
+        for index, event in enumerate(self.events):
+            if self._identity(event) == (household_id, connector, external_id):
+                del self.events[index]
+                return True
+        return False
+
+    @staticmethod
+    def _identity(event):
+        return (event.household_id, event.external_connector, event.external_id)
+
+
+def calendar_record(**overrides):
+    record = ExternalRecord(
+        connector="bakalari",
+        external_type="calendar_event",
+        external_id="term/1",
+        payload={
+            "title": "School trip",
+            "starts_at": datetime(2030, 6, 10, 8, 0, tzinfo=UTC),
+            "ends_at": datetime(2030, 6, 10, 13, 0, tzinfo=UTC),
+        },
+        content_hash="hash-1",
+        observed_at=datetime.now(UTC),
+    )
+    return record.model_copy(update=overrides) if overrides else record
 
 
 def make_request(**overrides):
@@ -127,3 +185,84 @@ async def test_event_view_maps_participant_members_to_ids():
     assert view.participants == [ada.id]
     assert view.is_all_day is True
     assert view.recurrence_weekdays == [6, 0]
+
+
+@pytest.mark.anyio
+async def test_apply_external_record_upserts_mirror():
+    repository = FakeMirrorRepository()
+    report = await CalendarService(repository, FakeHouseholdRepository()).apply_external_records(
+        uuid4(), [calendar_record()]
+    )
+    (event,) = repository.events
+    assert (event.external_connector, event.external_id) == ("bakalari", "term/1")
+    assert event.title == "School trip"
+    assert event.starts_at == datetime(2030, 6, 10, 8, 0, tzinfo=UTC)
+    assert event.ends_at == datetime(2030, 6, 10, 13, 0, tzinfo=UTC)
+    assert event.status == "scheduled"
+    assert report.model_dump() == {"applied": 1, "removed": 0, "skipped": 0}
+
+
+@pytest.mark.anyio
+async def test_reapplying_a_changed_record_updates_the_same_mirror():
+    repository = FakeMirrorRepository()
+    service = CalendarService(repository, FakeHouseholdRepository())
+    household_id = uuid4()
+    await service.apply_external_records(household_id, [calendar_record()])
+
+    changed = calendar_record(
+        payload={
+            "title": "School trip",
+            "starts_at": datetime(2030, 6, 10, 8, 0, tzinfo=UTC),
+            "location": "New hall",
+        }
+    )
+    report = await service.apply_external_records(household_id, [changed])
+
+    (event,) = repository.events
+    assert event.location == "New hall"
+    assert report.applied == 1
+
+
+@pytest.mark.anyio
+async def test_external_tombstone_removes_the_mirror():
+    repository = FakeMirrorRepository()
+    service = CalendarService(repository, FakeHouseholdRepository())
+    household_id = uuid4()
+    await service.apply_external_records(household_id, [calendar_record()])
+    assert len(repository.events) == 1
+
+    tombstone = calendar_record(deleted=True, payload={}, content_hash="")
+    report = await service.apply_external_records(household_id, [tombstone])
+
+    assert repository.events == []
+    assert report.model_dump() == {"applied": 0, "removed": 1, "skipped": 0}
+
+
+@pytest.mark.anyio
+async def test_tombstone_for_unknown_mirror_is_skipped():
+    repository = FakeMirrorRepository()
+    tombstone = calendar_record(external_id="ghost", deleted=True, payload={}, content_hash="")
+    report = await CalendarService(repository, FakeHouseholdRepository()).apply_external_records(
+        uuid4(), [tombstone]
+    )
+    assert repository.events == []
+    assert report.removed == 0
+    assert report.skipped == 1
+
+
+@pytest.mark.anyio
+async def test_records_of_other_domains_are_skipped():
+    repository = FakeMirrorRepository()
+    grade = calendar_record(external_type="school_grade", payload={"value": "1"})
+    report = await CalendarService(repository, FakeHouseholdRepository()).apply_external_records(
+        uuid4(), [grade]
+    )
+    assert repository.events == []
+    assert report.skipped == 1
+
+
+@pytest.mark.anyio
+async def test_malformed_live_payload_raises():
+    service = CalendarService(FakeMirrorRepository(), FakeHouseholdRepository())
+    with pytest.raises(ValidationError, match="starts_at"):
+        await service.apply_external_records(uuid4(), [calendar_record(payload={"title": "?"})])

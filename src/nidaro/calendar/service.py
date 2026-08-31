@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from uuid import UUID
 
@@ -8,7 +9,13 @@ from nidaro.calendar.recurrence import (
     validate_range,
 )
 from nidaro.calendar.repository import CalendarRepository
-from nidaro.calendar.schemas import CreateEventRequest, EventView
+from nidaro.calendar.schemas import (
+    CreateEventRequest,
+    EventView,
+    ExternalEventPayload,
+    MirrorApplyReport,
+)
+from nidaro.connectors.models import ExternalRecord
 from nidaro.household.repository import HouseholdRepository
 
 
@@ -32,6 +39,47 @@ class CalendarService:
 
     async def create_event(self, request: CreateEventRequest) -> EventView:
         return EventView.model_validate(await self.repository.create(request))
+
+    async def apply_external_records(
+        self, household_id: UUID, records: Sequence[ExternalRecord]
+    ) -> MirrorApplyReport:
+        """Land a connector batch into the calendar: upsert mirrors, honor
+        tombstones.
+
+        A live `calendar_event` record is validated against
+        `ExternalEventPayload` and upserted keyed by (household, connector,
+        external id). A tombstone record (`deleted=True`, Google
+        `status:"cancelled"` true deletions, CalDAV sync-collection REPORT
+        deletions) removes the mirror — and with it the event the family
+        sees. Tombstones for mirrors nidaro never had are counted as skipped,
+        as are records of other external types that belong to a different
+        domain application. A malformed live payload raises
+        `pydantic.ValidationError` and aborts the run; records before the bad
+        one are already committed, so callers should re-apply the whole batch
+        after fixing the source.
+        """
+        report = MirrorApplyReport()
+        for record in records:
+            if record.deleted:
+                if await self.repository.remove_mirror(
+                    household_id, record.connector, record.external_id
+                ):
+                    report.removed += 1
+                else:
+                    report.skipped += 1
+                continue
+            if record.external_type != "calendar_event":
+                report.skipped += 1
+                continue
+            payload = ExternalEventPayload.model_validate(record.payload)
+            await self.repository.upsert_mirror(
+                household_id,
+                record.connector,
+                record.external_id,
+                payload.model_dump(),
+            )
+            report.applied += 1
+        return report
 
     async def _household_timezone(self, household_id: UUID):
         household = await self.households.get(household_id)

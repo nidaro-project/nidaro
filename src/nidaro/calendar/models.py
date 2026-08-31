@@ -2,7 +2,17 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Integer, String, Table
+from sqlalchemy import (
+    ARRAY,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Table,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -30,9 +40,30 @@ event_participants = Table(
 
 
 class Event(TimestampMixin, Base):
+    """A calendar event, human-created or mirroring an external item.
+
+    A mirror carries the `external_connector` name plus the source's
+    `external_id`, so the application service can upsert it on every sync and
+    remove it when the source sends a tombstone (ExternalRecord.deleted). The
+    partial unique index makes one mirror per (household, connector, external
+    id) a database guarantee, not just an application habit.
+    """
+
     __tablename__ = "events"
+    __table_args__ = (
+        Index(
+            "uq_events_external_identity",
+            "household_id",
+            "external_connector",
+            "external_id",
+            unique=True,
+            postgresql_where=text("external_id IS NOT NULL"),
+        ),
+    )
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=new_uuid)
     household_id: Mapped[UUID] = mapped_column(ForeignKey("households.id"), index=True)
+    external_connector: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    external_id: Mapped[str | None] = mapped_column(String(250), nullable=True)
     title: Mapped[str] = mapped_column(String(250))
     description: Mapped[str | None]
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
