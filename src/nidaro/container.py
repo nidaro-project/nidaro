@@ -19,6 +19,8 @@ from nidaro.connectors.service import (
     ConnectorCredentialService,
     ConnectorService,
 )
+from nidaro.connectors.whatsapp.connector import WhatsAppConnector
+from nidaro.connectors.whatsapp.repository import WhatsAppEventRepository
 from nidaro.conversations.repository import ConversationRepository
 from nidaro.conversations.service import ConversationService
 from nidaro.household.repository import HouseholdRepository
@@ -54,6 +56,8 @@ class ApplicationServices:
 
     @classmethod
     def build(cls, sessions: async_sessionmaker[AsyncSession]) -> "ApplicationServices":
+        registry = ConnectorRegistry()
+        registry.register(WhatsAppConnector(WhatsAppEventRepository(sessions)))
         return cls(
             household=HouseholdService(HouseholdRepository(sessions)),
             calendar=CalendarService(CalendarRepository(sessions), HouseholdRepository(sessions)),
@@ -66,7 +70,7 @@ class ApplicationServices:
             conversations=ConversationService(ConversationRepository(sessions)),
             jobs=JobService(sessions),
             connectors=ConnectorService(
-                ConnectorRegistry(),
+                registry,
                 ConnectorCursorRepository(sessions),
                 ConnectorConfigRepository(sessions),
             ),

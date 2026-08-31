@@ -9,6 +9,7 @@ from nidaro.calendar import models as _calendar_models
 from nidaro.commitments import models as _commitment_models
 from nidaro.config import get_settings
 from nidaro.connectors import models as _connector_models
+from nidaro.connectors.whatsapp import models as _whatsapp_models
 from nidaro.conversations import models as _conversation_models
 from nidaro.db.base import Base
 from nidaro.household import models as _household_models
@@ -27,6 +28,7 @@ _model_modules = (
     _memory_models,
     _source_models,
     _task_models,
+    _whatsapp_models,
 )
 
 config = context.config
