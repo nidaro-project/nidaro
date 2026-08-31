@@ -9,8 +9,9 @@ responses are already scoped to it, so no child-id plumbing exists.
 
 `sync` gathers per account: login, EnabledModules discovery from
 `/api/3/user`, then — only for modules the school enables — the actual
-timetable (with substitution overlay), marks, and homework. Everything lands
-through `SchoolService.apply_*` (the [portal-2] seam); the returned
+timetable (with substitution overlay), marks, and homework. Payload
+mapping lives in `bakalari_mapping`; everything here lands through
+`SchoolService.apply_*` (the [portal-2] seam), and the returned
 `SyncResult` mirrors the landed items as `ExternalRecord`s. The run is
 snapshot-based: re-fetching is safe because grades and homework upsert by
 external id and the day's lessons are replaced wholesale, so no cursor state
@@ -21,11 +22,9 @@ to — no mark-as-read, no confirmations, no replies.
 """
 
 import json
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import timedelta
 from hashlib import sha256
-from typing import Any
 from uuid import UUID
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 from pydantic import BaseModel
@@ -35,17 +34,20 @@ from nidaro.connectors.bakalari_client import (
     BakalariClient,
     BakalariRequestError,
 )
+from nidaro.connectors.bakalari_mapping import (
+    apply_substitutions,
+    gather_day,
+    grades_from_marks,
+    homework_from_payload,
+    lessons_from_timetable,
+    module_enabled,
+)
 from nidaro.connectors.models import ConnectorContext, ExternalRecord, SyncResult
 from nidaro.connectors.service import ConnectorCredentialService, CredentialKeyMissing
 from nidaro.db.types import utc_now
-from nidaro.school.schemas import GradeInput, HomeworkInput, LessonInput, SubjectInput
 from nidaro.school.service import SchoolService
 
 BAKALARI = "bakalari"
-
-# Change/ChangeType names that mean the lesson does not happen (community-
-# documented v3 payloads use English names, some servers Czech ones).
-CANCELED_CHANGES = {"removed", "cancelled", "canceled", "zruseno", "zrušeno"}
 
 HOMEWORK_WINDOW_DAYS = 14
 
@@ -63,195 +65,6 @@ class BakalariAccount(BaseModel):
     base_url: str
     username: str
     password: str
-
-
-def gather_day(timezone: str) -> date:
-    """Today in the household's timezone, UTC when the zone is unknown."""
-    try:
-        zone = ZoneInfo(timezone)
-    except (ZoneInfoNotFoundError, KeyError, ValueError):
-        zone = None
-    moment = datetime.now(zone) if zone else datetime.now(UTC)
-    return moment.date()
-
-
-def module_enabled(user: dict[str, Any], name: str) -> bool:
-    """EnabledModules discovery: a module counts as enabled when `/api/3/user`
-    lists it with a truthy value; a school withholding a module omits it."""
-    return bool((user.get("EnabledModules") or {}).get(name))
-
-
-def _as_date(value: Any) -> date | None:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(str(value)).date()
-    except ValueError:
-        return None
-
-
-def _as_time(value: Any) -> time | None:
-    if not value:
-        return None
-    parts = str(value).split(":")
-    try:
-        return time(int(parts[0]), int(parts[1]))
-    except (IndexError, ValueError):
-        return None
-
-
-def _name(entry: Any) -> str | None:
-    if not isinstance(entry, dict):
-        return None
-    return entry.get("Name") or entry.get("Abbrev") or None
-
-
-def _cancel_state(change: dict[str, Any] | None) -> tuple[bool, str | None]:
-    """(canceled, note) from a Change object; no change means a live lesson."""
-    change_type = ""
-    if isinstance(change, dict):
-        change_type = str((change.get("ChangeType") or {}).get("Name") or "").strip()
-        description = change.get("Description")
-    else:
-        description = None
-    canceled = change_type.lower() in CANCELED_CHANGES
-    note = description or (change_type if canceled else None)
-    return canceled, note or None
-
-
-def lessons_from_timetable(payload: dict[str, Any], day: date) -> list[LessonInput]:
-    """Materialized lessons for `day` from a `/api/3/timetable/actual` payload.
-
-    Lessons without a subject or without a known timeslot are skipped; lesson
-    times come from the payload's hour table (or the entry itself when it
-    carries its own times).
-    """
-    slots = {slot.get("Id"): slot for slot in payload.get("Hours", []) if isinstance(slot, dict)}
-    entry = next(
-        (
-            entry
-            for entry in payload.get("Days", [])
-            if isinstance(entry, dict) and str(entry.get("Date", "")).startswith(day.isoformat())
-        ),
-        None,
-    )
-    if entry is None:
-        return []
-    lessons: list[LessonInput] = []
-    for hour in entry.get("Hours", []):
-        subject = hour.get("Subject")
-        if not isinstance(subject, dict):
-            continue
-        slot = slots.get(hour.get("HourId"), hour) or {}
-        start = _as_time(slot.get("BeginTime"))
-        end = _as_time(slot.get("EndTime"))
-        if start is None or end is None:
-            continue
-        canceled, note = _cancel_state(hour.get("Change"))
-        teacher = _name(hour.get("Teacher"))
-        lessons.append(
-            LessonInput(
-                subject=SubjectInput(
-                    code=subject.get("Abbrev") or "?",
-                    name=subject.get("Name") or subject.get("Abbrev") or "Subject",
-                    teacher=teacher,
-                ),
-                start=start,
-                end=end,
-                position=int(hour.get("HourId", len(lessons) + 1)),
-                teacher=teacher,
-                room=_name(hour.get("Room")),
-                canceled=canceled,
-                substitution=note,
-            )
-        )
-    return sorted(lessons, key=lambda lesson: lesson.position)
-
-
-def apply_substitutions(
-    lessons: list[LessonInput], entries: list[dict[str, Any]], day: date
-) -> list[LessonInput]:
-    """Overlay `/api/3/substitutions` entries for `day` onto the lessons.
-
-    A matching entry (same day and hour) can cancel the lesson, replace the
-    teacher, and carries the note parents see. Entries for other days and
-    hours without a lesson are ignored.
-    """
-    merged = [lesson.model_copy() for lesson in lessons]
-    by_position = {lesson.position: lesson for lesson in merged}
-    for entry in entries:
-        if not isinstance(entry, dict) or _as_date(entry.get("Date")) != day:
-            continue
-        position = entry.get("Hour")
-        if position is None:
-            continue
-        lesson = by_position.get(position)
-        if lesson is None:
-            continue
-        change_type = str((entry.get("ChangeType") or {}).get("Name") or "").strip()
-        if change_type.lower() in CANCELED_CHANGES:
-            lesson.canceled = True
-        note = entry.get("Description") or change_type or None
-        if note:
-            lesson.substitution = note
-        teacher = _name(entry.get("Teacher"))
-        if teacher:
-            lesson.teacher = teacher
-    return merged
-
-
-def grades_from_marks(payload: dict[str, Any]) -> list[GradeInput]:
-    """Marks per subject from a `/api/3/marks` payload."""
-    grades: list[GradeInput] = []
-    for block in payload.get("Subjects", []):
-        subject = block.get("Subject") or {}
-        code = subject.get("Abbrev") or "?"
-        name = subject.get("Name") or code
-        for mark in block.get("Marks", []):
-            mark_id = mark.get("MarkId")
-            graded_on = _as_date(mark.get("Date"))
-            if not mark_id or graded_on is None:
-                continue
-            weight = mark.get("Weight")
-            grades.append(
-                GradeInput(
-                    external_id=str(mark_id),
-                    subject=SubjectInput(code=code, name=name),
-                    value=str(mark.get("MarkText") or ""),
-                    weight=round(float(weight)) if weight is not None else 1,
-                    graded_on=graded_on,
-                    teacher=mark.get("Teacher"),
-                    confirmed=bool(mark.get("IsConfirmed")),
-                )
-            )
-    return grades
-
-
-def homework_from_payload(payload: dict[str, Any]) -> list[HomeworkInput]:
-    """Assignments from a `/api/3/homeworks` payload."""
-    items: list[HomeworkInput] = []
-    for entry in payload.get("Homeworks", []):
-        external_id = entry.get("Id")
-        if not external_id:
-            continue
-        subject = entry.get("Subject") or {}
-        items.append(
-            HomeworkInput(
-                external_id=str(external_id),
-                subject=SubjectInput(
-                    code=subject.get("Abbrev") or "?",
-                    name=subject.get("Name") or subject.get("Abbrev") or "Subject",
-                ),
-                text=str(entry.get("Content") or ""),
-                due_on=_as_date(entry.get("DateEnd")),
-                attachments=[
-                    attachment["Name"]
-                    for attachment in entry.get("Attachments") or []
-                    if isinstance(attachment, dict) and attachment.get("Name")
-                ],
-            )
-        )
-    return items
 
 
 class BakalariConnector:
@@ -274,7 +87,9 @@ class BakalariConnector:
 
         Snapshot semantics make the `cursor` argument irrelevant (see module
         docstring), so `next_cursor` is always None and `ConnectorService`
-        keeps whatever cursor state it holds untouched.
+        keeps whatever cursor state it holds untouched. A failure per account
+        is collected; when any account failed the good ones still landed, but
+        the run raises so `ConnectorService` does not stamp `last_synced_at`.
         """
         household = UUID(context.household_id)
         names = await self._credentials.names(household, BAKALARI)

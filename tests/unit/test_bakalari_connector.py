@@ -21,6 +21,8 @@ from nidaro.connectors.bakalari import (
     BakalariConfigError,
     BakalariConnector,
     BakalariGatherError,
+)
+from nidaro.connectors.bakalari_mapping import (
     apply_substitutions,
     gather_day,
     grades_from_marks,
