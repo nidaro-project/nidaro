@@ -19,11 +19,12 @@ Conventions:
 
 import hashlib
 import json
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from nidaro.calendar.recurrence import resolve_timezone
 from nidaro.calendar.schemas import ExternalEventPayload
@@ -136,17 +137,16 @@ def to_external_record(
     tz = resolve_timezone(timezone)
     starts_at, is_all_day = parse_when(event.get("start") or {}, tz)
     ends_at, _ = parse_when(event.get("end") or {}, tz)
-    try:
-        payload = ExternalEventPayload(
-            title=str(event.get("summary") or ""),
-            starts_at=starts_at,
-            ends_at=ends_at,
-            description=event.get("description"),
-            location=event.get("location"),
-            is_all_day=is_all_day,
-        )
-    except ValidationError as error:
-        raise ValueError(f"Google event {identity} is missing required timing: {error}") from error
+    if starts_at is None:
+        raise ValueError(f"Google event {identity} carries no start time")
+    payload = ExternalEventPayload(
+        title=str(event.get("summary") or ""),
+        starts_at=starts_at,
+        ends_at=ends_at,
+        description=event.get("description"),
+        location=event.get("location"),
+        is_all_day=is_all_day,
+    )
     return ExternalRecord(
         connector=CONNECTOR_NAME,
         external_type=EXTERNAL_TYPE,
@@ -181,7 +181,7 @@ def build_event_body(
     location: str | None,
     is_all_day: bool,
     recurrence_weekdays: list[int] | None,
-    attendees: list[str],
+    attendees: Sequence[str],
     tz: ZoneInfo,
 ) -> dict:
     """nidaro event fields → `events.insert` body with mirror-loop markers."""

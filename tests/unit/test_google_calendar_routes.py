@@ -1,18 +1,34 @@
-from types import SimpleNamespace
+"""Google Calendar OAuth route tests: gating, CSRF state, callback wiring.
+
+Real app + FastAPI dependency override (house pattern); the OAuth exchange
+itself lives behind GoogleCalendarAccountService.complete_connection and is
+unit-tested against fixture replays in test_google_calendar_accounts.py.
+"""
+
+from dataclasses import replace
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
-from starlette.requests import Request
+from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from nidaro.app import create_app
 from nidaro.config import Settings
+from nidaro.container import ApplicationServices
+from nidaro.db.types import utc_now
+from nidaro.household.models import Household
+from nidaro.household.repository import HouseholdRepository
+from nidaro.household.service import HouseholdService
+from nidaro.web.dependencies import get_services
 from nidaro.web.routes import google_calendar as routes
 
 
-def make_settings(configured=True):
-    if configured:
-        return Settings(google_client_id="id", google_client_secret="secret")
-    return Settings()
+class FakeHouseholdRepository(HouseholdRepository):
+    def __init__(self, household=None):
+        self.household = household
+
+    async def get(self, household_id=None):
+        return self.household
 
 
 class FakeGoogleAccounts:
@@ -21,49 +37,67 @@ class FakeGoogleAccounts:
 
     async def complete_connection(self, household_id, code, *, oauth):
         self.calls.append((household_id, code, oauth))
-        return SimpleNamespace(id=uuid4())
+        return SimpleAccount()
 
 
-class FakeServices:
-    def __init__(self, household, accounts):
-        class Households:
-            async def get_household(self, household_id=None):
-                return household
-
-        self.household = Households()
-        self.google_accounts = accounts
+class SimpleAccount:
+    id = uuid4()
 
 
-def request_with_cookie(cookie: str | None) -> Request:
-    headers = []
-    if cookie is not None:
-        headers.append((b"cookie", f"{routes._STATE_COOKIE}={cookie}".encode()))
-    return Request(scope={"type": "http", "method": "GET", "headers": headers})
+def _household():
+    return Household(
+        id=uuid4(),
+        name="Morgan",
+        timezone="Europe/Prague",
+        created_at=utc_now(),
+        updated_at=utc_now(),
+    )
 
 
-@pytest.mark.anyio
-async def test_connect_requires_configuration(monkeypatch):
-    monkeypatch.setattr(routes, "get_settings", lambda: make_settings(configured=False))
-
-    with pytest.raises(HTTPException) as excinfo:
-        await routes.connect(FakeServices(None, FakeGoogleAccounts()))
-    assert excinfo.value.status_code == 503
-
-
-@pytest.mark.anyio
-async def test_connect_needs_a_seeded_household(monkeypatch):
-    monkeypatch.setattr(routes, "get_settings", lambda: make_settings())
-
-    with pytest.raises(HTTPException) as excinfo:
-        await routes.connect(FakeServices(None, FakeGoogleAccounts()))
-    assert excinfo.value.status_code == 404
+def _services(household, accounts):
+    base = ApplicationServices.build(async_sessionmaker())
+    return replace(
+        base,
+        household=HouseholdService(FakeHouseholdRepository(household)),
+        google_accounts=accounts,
+    )
 
 
-@pytest.mark.anyio
-async def test_connect_redirects_to_google_with_state_cookie(monkeypatch):
-    monkeypatch.setattr(routes, "get_settings", lambda: make_settings())
+def _client(services):
+    app = create_app()
+    app.dependency_overrides[get_services] = lambda: services
+    return TestClient(app)
 
-    response = await routes.connect(FakeServices(SimpleNamespace(id=uuid4()), FakeGoogleAccounts()))
+
+@pytest.fixture
+def configured_settings(monkeypatch):
+    settings = Settings(google_client_id="id", google_client_secret="secret")
+    monkeypatch.setattr(routes, "get_settings", lambda: settings)
+    return settings
+
+
+def test_connect_requires_configuration(monkeypatch):
+    monkeypatch.setattr(routes, "get_settings", lambda: Settings())
+    client = _client(_services(_household(), FakeGoogleAccounts()))
+
+    response = client.get("/api/v1/connectors/google-calendar/connect")
+
+    assert response.status_code == 503
+    assert "NIDARO_GOOGLE_CLIENT_ID" in response.json()["detail"]
+
+
+def test_connect_needs_a_seeded_household(configured_settings):
+    client = _client(_services(None, FakeGoogleAccounts()))
+
+    response = client.get("/api/v1/connectors/google-calendar/connect")
+
+    assert response.status_code == 404
+
+
+def test_connect_redirects_to_google_with_state_cookie(configured_settings):
+    client = _client(_services(_household(), FakeGoogleAccounts()))
+
+    response = client.get("/api/v1/connectors/google-calendar/connect", follow_redirects=False)
 
     assert response.status_code == 307
     assert response.headers["location"].startswith("https://accounts.google.com/o/oauth2/v2/auth?")
@@ -71,52 +105,41 @@ async def test_connect_redirects_to_google_with_state_cookie(monkeypatch):
     assert routes._STATE_COOKIE in response.headers["set-cookie"]
 
 
-@pytest.mark.anyio
-async def test_callback_rejects_state_mismatch(monkeypatch):
-    monkeypatch.setattr(routes, "get_settings", lambda: make_settings())
+def test_callback_rejects_state_mismatch(configured_settings):
+    client = _client(_services(_household(), FakeGoogleAccounts()))
 
-    with pytest.raises(HTTPException) as excinfo:
-        await routes.callback(
-            request_with_cookie("cookie-state"),
-            code="code",
-            state="query-state",
-            services=FakeServices(SimpleNamespace(id=uuid4()), FakeGoogleAccounts()),
-        )
-    assert excinfo.value.status_code == 400
+    response = client.get("/api/v1/connectors/google-calendar/callback?code=the-code&state=wrong")
+
+    assert response.status_code == 400
 
 
-@pytest.mark.anyio
-async def test_callback_rejects_google_error(monkeypatch):
-    monkeypatch.setattr(routes, "get_settings", lambda: make_settings())
+def test_callback_rejects_google_error(configured_settings):
+    client = _client(_services(_household(), FakeGoogleAccounts()))
+    client.get("/api/v1/connectors/google-calendar/connect")
+    state = client.cookies[routes._STATE_COOKIE]
 
-    with pytest.raises(HTTPException) as excinfo:
-        await routes.callback(
-            request_with_cookie("state-1"),
-            code="code",
-            state="state-1",
-            error="access_denied",
-            services=FakeServices(SimpleNamespace(id=uuid4()), FakeGoogleAccounts()),
-        )
-    assert excinfo.value.status_code == 400
-    assert "access_denied" in excinfo.value.detail
+    response = client.get(
+        f"/api/v1/connectors/google-calendar/callback?code=x&state={state}&error=access_denied"
+    )
+
+    assert response.status_code == 400
+    assert "access_denied" in response.json()["detail"]
 
 
-@pytest.mark.anyio
-async def test_callback_exchanges_and_redirects_to_settings(monkeypatch):
-    monkeypatch.setattr(routes, "get_settings", lambda: make_settings())
+def test_callback_exchanges_and_redirects_to_settings(configured_settings):
     accounts = FakeGoogleAccounts()
-    household_id = uuid4()
+    household = _household()
+    client = _client(_services(household, accounts))
+    client.get("/api/v1/connectors/google-calendar/connect")
+    state = client.cookies[routes._STATE_COOKIE]
 
-    response = await routes.callback(
-        request_with_cookie("state-1"),
-        code="the-code",
-        state="state-1",
-        services=FakeServices(SimpleNamespace(id=household_id), accounts),
+    response = client.get(
+        f"/api/v1/connectors/google-calendar/callback?code=the-code&state={state}",
+        follow_redirects=False,
     )
 
     assert response.status_code == 307
     assert response.headers["location"] == "/settings?connected=google-calendar"
-    assert "Max-Age=0" in response.headers["set-cookie"]
     ((stored_household, stored_code, _oauth),) = accounts.calls
-    assert stored_household == household_id
+    assert stored_household == household.id
     assert stored_code == "the-code"

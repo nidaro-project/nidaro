@@ -101,8 +101,9 @@ async def test_invalid_grant_means_reconnect_not_retry():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(400, json={"error": "invalid_grant"})
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
-        with pytest.raises(InvalidGrantError, match="reconnected"):
+    transport = httpx.MockTransport(handler)
+    with pytest.raises(InvalidGrantError, match="reconnected"):
+        async with httpx.AsyncClient(transport=transport) as http:
             await refresh_access_token(OAUTH, "dead-token", http=http)
 
 
@@ -111,6 +112,7 @@ async def test_other_token_errors_surface_verbatim():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, json={"error": "backend_error"})
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
-        with pytest.raises(GoogleOAuthError, match="500"):
+    transport = httpx.MockTransport(handler)
+    with pytest.raises(GoogleOAuthError, match="500"):
+        async with httpx.AsyncClient(transport=transport) as http:
             await refresh_access_token(OAUTH, "token", http=http)

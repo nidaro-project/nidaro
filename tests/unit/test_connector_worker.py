@@ -7,7 +7,7 @@ from nidaro.calendar.models import Event
 from nidaro.calendar.repository import CalendarRepository
 from nidaro.calendar.service import CalendarService
 from nidaro.config import get_settings
-from nidaro.connectors.models import ConnectorConfig, ExternalRecord, SyncResult
+from nidaro.connectors.models import ConnectorConfig, ConnectorCursor, ExternalRecord, SyncResult
 from nidaro.connectors.registry import ConnectorRegistry
 from nidaro.connectors.repository import ConnectorConfigRepository, ConnectorCursorRepository
 from nidaro.connectors.service import ConnectorConfigService, ConnectorService
@@ -72,13 +72,20 @@ class ScriptedConnector:
 
 class FakeCursorRepository(ConnectorCursorRepository):
     def __init__(self):
-        self.rows = {}
+        self.rows: dict[tuple[object, str], str] = {}
 
     async def get(self, household_id, connector):
         return self.rows.get((household_id, connector))
 
     async def save(self, household_id, connector, cursor):
         self.rows[(household_id, connector)] = cursor
+        return ConnectorCursor(
+            household_id=household_id,
+            connector=connector,
+            cursor=cursor,
+            created_at=utc_now(),
+            updated_at=utc_now(),
+        )
 
     async def clear(self, household_id, connector):
         return self.rows.pop((household_id, connector), None) is not None
@@ -150,19 +157,18 @@ def make_services(connector, config_repository):
     exercises.
     """
     sessions = create_session_factory(create_engine(get_settings()))
-    calendar = CalendarService(FakeMirrorRepository(), FakeHouseholdRepository())
-    return (
-        replace(
-            ApplicationServices.build(sessions),
-            connectors=ConnectorService(
-                _registry(connector), FakeCursorRepository(), config_repository
-            ),
-            connector_configs=ConnectorConfigService(config_repository),
-            household=FakeHouseholdsService(),
-            calendar=calendar,
+    mirror_repository = FakeMirrorRepository()
+    calendar = CalendarService(mirror_repository, FakeHouseholdRepository())
+    services = replace(
+        ApplicationServices.build(sessions),
+        connectors=ConnectorService(
+            _registry(connector), FakeCursorRepository(), config_repository
         ),
-        calendar,
+        connector_configs=ConnectorConfigService(config_repository),
+        household=FakeHouseholdsService(),
+        calendar=calendar,
     )
+    return services, mirror_repository
 
 
 def _registry(connector):
@@ -175,7 +181,7 @@ def _registry(connector):
 async def test_connector_run_syncs_applies_and_stamps():
     connector = ScriptedConnector(records=[external_record()])
     config_repository = FakeConfigRepository([config_row()])
-    services, calendar = make_services(connector, config_repository)
+    services, mirrors = make_services(connector, config_repository)
 
     outcome = await run_connector_sync(services, "google_calendar", str(HOUSEHOLD_ID))
 
@@ -183,26 +189,26 @@ async def test_connector_run_syncs_applies_and_stamps():
     assert outcome["applied"] == 1
     (context, _cursor) = connector.seen[0]
     assert context.timezone == "Europe/Prague"
-    assert len(calendar.repository.events) == 1
+    assert len(mirrors.events) == 1
     assert config_repository.stamped == [(HOUSEHOLD_ID, "google_calendar")]
 
 
 @pytest.mark.anyio
 async def test_connector_without_applier_is_not_run():
     connector = ScriptedConnector()
-    services, calendar = make_services(connector, FakeConfigRepository())
+    services, mirrors = make_services(connector, FakeConfigRepository())
 
     outcome = await run_connector_sync(services, "whatsapp_bridge", str(HOUSEHOLD_ID))
 
     assert outcome["status"] == "no_applier"
     assert connector.seen == []
-    assert calendar.repository.events == []
+    assert mirrors.events == []
 
 
 @pytest.mark.anyio
 async def test_connector_run_for_unknown_household_is_reported():
     connector = ScriptedConnector()
-    services, _calendar = make_services(connector, FakeConfigRepository())
+    services, _mirrors = make_services(connector, FakeConfigRepository())
 
     outcome = await run_connector_sync(services, "google_calendar", str(uuid4()))
 
@@ -214,7 +220,7 @@ async def test_connector_run_for_unknown_household_is_reported():
 async def test_sweep_runs_every_due_config_and_isolates_failures():
     failing = ScriptedConnector(error=RuntimeError("Google is down"))
     config_repository = FakeConfigRepository([config_row(), config_row(household_id=HOUSEHOLD_ID)])
-    services, _calendar = make_services(failing, config_repository)
+    services, _mirrors = make_services(failing, config_repository)
 
     result = await run_due_connector_syncs(services)
 
@@ -229,10 +235,10 @@ async def test_sweep_runs_every_due_config_and_isolates_failures():
 @pytest.mark.anyio
 async def test_sweep_with_nothing_due_runs_nothing():
     connector = ScriptedConnector(records=[external_record()])
-    services, calendar = make_services(connector, FakeConfigRepository())
+    services, mirrors = make_services(connector, FakeConfigRepository())
 
     result = await run_due_connector_syncs(services)
 
     assert result["ran"] == 0
     assert connector.seen == []
-    assert calendar.repository.events == []
+    assert mirrors.events == []

@@ -13,6 +13,8 @@ from nidaro.connectors.google_calendar.accounts import (
     GoogleConnectionError,
 )
 from nidaro.connectors.google_calendar.oauth import GoogleOAuthSettings
+from nidaro.connectors.models import ConnectorCredential
+from nidaro.connectors.repository import ConnectorCredentialRepository
 from nidaro.connectors.service import ConnectorCredentialService
 from nidaro.db.types import new_uuid, utc_now
 
@@ -54,7 +56,7 @@ class FakeAccountRepository(GoogleCalendarAccountRepository):
         return self.rows.pop((household_id, email), None) is not None
 
 
-class FakeCredentialRepository:
+class FakeCredentialRepository(ConnectorCredentialRepository):
     def __init__(self):
         self.ciphertexts: dict[tuple[object, str, str], str] = {}
 
@@ -63,6 +65,14 @@ class FakeCredentialRepository:
 
     async def save_ciphertext(self, household_id, connector, name, ciphertext):
         self.ciphertexts[(household_id, connector, name)] = ciphertext
+        return ConnectorCredential(
+            household_id=household_id,
+            connector=connector,
+            name=name,
+            secret=ciphertext,
+            created_at=utc_now(),
+            updated_at=utc_now(),
+        )
 
     async def delete(self, household_id, connector, name):
         return self.ciphertexts.pop((household_id, connector, name), None) is not None
@@ -78,13 +88,18 @@ class FakeCredentialRepository:
 
 def make_service():
     repository = FakeAccountRepository()
-    credentials = ConnectorCredentialService(FakeCredentialRepository(), SecretBox(TEST_KEY))
-    return GoogleCalendarAccountService(repository, credentials), credentials
+    credential_repository = FakeCredentialRepository()
+    credentials = ConnectorCredentialService(credential_repository, SecretBox(TEST_KEY))
+    return (
+        GoogleCalendarAccountService(repository, credentials),
+        credentials,
+        credential_repository,
+    )
 
 
 @pytest.mark.anyio
 async def test_register_stores_token_encrypted_and_row():
-    service, credentials = make_service()
+    service, _credentials, credential_repository = make_service()
     household_id = uuid4()
 
     row = await service.register(
@@ -96,13 +111,13 @@ async def test_register_stores_token_encrypted_and_row():
 
     assert row.google_email == "ada@example.com"
     assert row.calendar_id == "primary"
-    (ciphertext,) = credentials.repository.ciphertexts.values()
+    (ciphertext,) = credential_repository.ciphertexts.values()
     assert ciphertext != "refresh-token-1"
 
 
 @pytest.mark.anyio
 async def test_register_overwrites_existing_account_in_place():
-    service, _ = make_service()
+    service, _credentials, _credential_repository = make_service()
     household_id = uuid4()
     await service.register(household_id, "ada@example.com", "old-token", calendar_id="primary")
 
@@ -115,7 +130,7 @@ async def test_register_overwrites_existing_account_in_place():
 
 @pytest.mark.anyio
 async def test_credentials_for_household_decrypts_tokens():
-    service, _ = make_service()
+    service, _credentials, _credential_repository = make_service()
     household_id = uuid4()
     await service.register(household_id, "ben@example.com", "ben-token")
     await service.register(household_id, "ada@example.com", "ada-token")
@@ -128,7 +143,7 @@ async def test_credentials_for_household_decrypts_tokens():
 
 @pytest.mark.anyio
 async def test_missing_credential_for_row_is_loud():
-    service, credentials = make_service()
+    service, credentials, _credential_repository = make_service()
     household_id = uuid4()
     await service.register(household_id, "ada@example.com", "token")
 
@@ -140,7 +155,7 @@ async def test_missing_credential_for_row_is_loud():
 
 @pytest.mark.anyio
 async def test_forget_removes_row_and_credential():
-    service, _ = make_service()
+    service, _credentials, _credential_repository = make_service()
     household_id = uuid4()
     await service.register(household_id, "ada@example.com", "token")
 
@@ -151,7 +166,7 @@ async def test_forget_removes_row_and_credential():
 
 @pytest.mark.anyio
 async def test_complete_connection_exchanges_identifies_and_stores():
-    service, credentials = make_service()
+    service, _credentials, credential_repository = make_service()
     household_id = uuid4()
     code = "auth-code-1"
 
@@ -194,14 +209,14 @@ async def test_complete_connection_exchanges_identifies_and_stores():
     (account,) = await service.credentials_for_household(household_id)
     assert account.refresh_token == "rt-new"
     assert (
-        credentials.repository.ciphertexts[(household_id, CONNECTOR_NAME, "ada@example.com")]
+        credential_repository.ciphertexts[(household_id, CONNECTOR_NAME, "ada@example.com")]
         != "rt-new"
     )
 
 
 @pytest.mark.anyio
 async def test_complete_connection_without_refresh_token_stores_nothing():
-    service, credentials = make_service()
+    service, _credentials, credential_repository = make_service()
 
     transport = httpx.MockTransport(
         lambda request: httpx.Response(200, json={"access_token": "at-1"})
@@ -216,4 +231,4 @@ async def test_complete_connection_without_refresh_token_stores_nothing():
             ),
             transport=transport,
         )
-    assert credentials.repository.ciphertexts == {}
+    assert credential_repository.ciphertexts == {}

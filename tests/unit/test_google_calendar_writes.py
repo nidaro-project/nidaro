@@ -23,6 +23,8 @@ from nidaro.connectors.google_calendar.writes import (
     NoGoogleAccountError,
 )
 from nidaro.db.types import new_uuid, utc_now
+from nidaro.household.models import Household
+from nidaro.household.repository import HouseholdRepository
 from nidaro.household.schemas import HouseholdView
 from nidaro.household.service import HouseholdService
 
@@ -138,6 +140,20 @@ class FakeMirrorRepository(CalendarRepository):
         return True
 
 
+class FakeHouseholdRepository(HouseholdRepository):
+    def __init__(self):
+        pass
+
+    async def get(self, household_id=None):
+        return Household(
+            id=new_uuid(),
+            name="Home",
+            timezone="Europe/Prague",
+            created_at=utc_now(),
+            updated_at=utc_now(),
+        )
+
+
 class FakeHouseholds(HouseholdService):
     def __init__(self, timezone="Europe/Prague"):
         self.timezone = timezone
@@ -153,7 +169,7 @@ class FakeHouseholds(HouseholdService):
 
 def make_service(accounts=None, client=None):
     mirror_repository = FakeMirrorRepository()
-    calendar = CalendarService(mirror_repository, FakeHouseholds())
+    calendar = CalendarService(mirror_repository, FakeHouseholdRepository())
     service = GoogleCalendarWriteService(
         accounts if accounts is not None else FakeAccounts([ADA]),
         client if client is not None else FakeClient(),

@@ -9,6 +9,7 @@ LAN address the API is published on — see docs/deployment.md).
 """
 
 import secrets
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -19,6 +20,10 @@ from nidaro.connectors.google_calendar.oauth import GoogleOAuthSettings, authori
 from nidaro.container import ApplicationServices
 from nidaro.web.dependencies import get_services
 
+# The house ruff-clean pattern for route-level service dependencies (see
+# web/routes/meals.py): an Annotated alias instead of a default-value call.
+Services = Annotated[ApplicationServices, Depends(get_services)]
+
 router = APIRouter(prefix="/api/v1/connectors/google-calendar", tags=["connectors"])
 
 _STATE_COOKIE = "nidaro_gcal_oauth_state"
@@ -26,7 +31,7 @@ _STATE_MAX_AGE_SECONDS = 600
 
 
 @router.get("/connect")
-async def connect(services: ApplicationServices = Depends(get_services)) -> RedirectResponse:  # noqa: B008
+async def connect(services: Services) -> RedirectResponse:
     """Start one member's consent flow: bounce to Google's consent screen."""
     oauth = _require_oauth()
     household = await services.household.get_household()
@@ -45,8 +50,8 @@ async def callback(
     request: Request,
     code: str,
     state: str,
+    services: Services,
     error: str | None = None,
-    services: ApplicationServices = Depends(get_services),  # noqa: B008
 ) -> RedirectResponse:
     """Finish the consent flow: exchange the code, store the token encrypted."""
     oauth = _require_oauth()
