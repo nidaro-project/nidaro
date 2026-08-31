@@ -17,12 +17,22 @@ class ConnectorContext(BaseModel):
 
 
 class ExternalRecord(BaseModel):
+    """One item landed from an external source.
+
+    A record with `deleted=True` is a tombstone: the source removed the item
+    (a Google Calendar event turning `status:"cancelled"`, a CalDAV
+    sync-collection REPORT deletion). Its `payload` carries no content and
+    must not be applied; the domain application service that mirrors the
+    record must remove its mirror instead. Live records keep `deleted=False`.
+    """
+
     connector: str
     external_type: str
     external_id: str
     payload: dict[str, Any]
     content_hash: str
     observed_at: datetime
+    deleted: bool = False
 
 
 class SyncResult(BaseModel):

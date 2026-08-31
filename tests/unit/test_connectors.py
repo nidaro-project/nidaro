@@ -34,6 +34,48 @@ class FakeConnector:
         )
 
 
+def test_external_record_defaults_to_live():
+    record = ExternalRecord(
+        connector="fake",
+        external_type="note",
+        external_id="1",
+        payload={},
+        content_hash="hash",
+        observed_at=datetime.now(UTC),
+    )
+    assert record.deleted is False
+
+
+@pytest.mark.anyio
+async def test_sync_passes_tombstone_records_through():
+    class TombstoneConnector:
+        name = "tombstoning"
+
+        async def sync(self, context, cursor):
+            return SyncResult(
+                records=[
+                    ExternalRecord(
+                        connector=self.name,
+                        external_type="calendar_event",
+                        external_id="evt-7",
+                        payload={},
+                        content_hash="",
+                        observed_at=datetime.now(UTC),
+                        deleted=True,
+                    )
+                ],
+                next_cursor="2",
+            )
+
+    registry = ConnectorRegistry()
+    registry.register(TombstoneConnector())
+    result = await ConnectorService(registry, FakeCursorRepository()).sync(
+        "tombstoning", ConnectorContext(household_id=str(uuid4()), timezone="UTC")
+    )
+    assert result.records[0].deleted is True
+    assert result.records[0].external_id == "evt-7"
+
+
 @pytest.mark.anyio
 async def test_fake_connector_sync_and_registry():
     registry = ConnectorRegistry()
