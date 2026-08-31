@@ -80,14 +80,9 @@ class Recorder:
     def __init__(self) -> None:
         self.attached: list[FakeClient] = []
         self.detached = 0
-        self.clock: Clock | None = None
-        self.stop_after_attaches: int | None = None
 
     async def on_attach(self, client) -> None:
         self.attached.append(client)
-        if self.stop_after_attaches is not None and len(self.attached) >= self.stop_after_attaches:
-            assert self.clock is not None
-            self.clock.stop_supervisor()
 
     async def on_detach(self) -> None:
         self.detached += 1
@@ -124,7 +119,6 @@ def build(browser: FakeBrowser, recorder: Recorder, clock: Clock) -> ChromiumSup
         sleep=clock,
     )
     clock._supervisor = supervisor
-    recorder.clock = clock
     return supervisor
 
 
