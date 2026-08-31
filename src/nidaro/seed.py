@@ -16,6 +16,9 @@ from nidaro.household.schemas import CreateHouseholdRequest
 from nidaro.meals.models import Dish
 from nidaro.meals.repository import MealsRepository
 from nidaro.meals.schemas import CreateDishRequest, PlanMealRequest, Slot
+from nidaro.school.repository import SchoolRepository
+from nidaro.school.schemas import GradeInput, HomeworkInput, LessonInput, SubjectInput
+from nidaro.school.service import SchoolService
 
 MEMBERS = (("Alex", "parent"), ("Sam", "parent"), ("Emma", "child"), ("Leo", "child"))
 
@@ -207,6 +210,102 @@ async def _seed_meals(meals: MealsRepository, household: Household, today: date)
         await meals.create_planned(request, meal.name)
 
 
+async def _seed_school(school: SchoolService, household: Household, today: date) -> None:
+    """Idempotent by construction: days are replaced wholesale, grades and
+    homework upsert by external id, equipment is set outright."""
+    kids = {m.name: m for m in household.members if m.role == "child"}
+    if "Emma" not in kids or "Leo" not in kids:
+        return
+    tomorrow = today + timedelta(days=1)
+
+    def lesson(position: int, code: str, name: str, canceled: bool = False) -> LessonInput:
+        return LessonInput(
+            subject=SubjectInput(code=code, name=name),
+            start=time(8 + position, 0),
+            end=time(8 + position, 45),
+            position=position,
+            teacher="Mgr. Vávrová",
+            room="204",
+            canceled=canceled,
+            substitution="Moved to room 118" if canceled else None,
+        )
+
+    emma_lessons = [
+        lesson(1, "M", "Matematika"),
+        lesson(2, "ČJ", "Český jazyk"),
+        lesson(3, "TV", "Tělesná výchova", canceled=True),
+    ]
+    await school.apply_day(kids["Emma"].id, household.id, today, emma_lessons)
+    await school.apply_day(
+        kids["Emma"].id, household.id, tomorrow, [lesson(1, "PČ", "Pracovní činnosti")]
+    )
+    await school.apply_grades(
+        kids["Emma"].id,
+        household.id,
+        [
+            GradeInput(
+                external_id="seed-emma-m",
+                subject=SubjectInput(code="M", name="Matematika"),
+                value="1",
+                weight=2,
+                graded_on=today - timedelta(days=2),
+                confirmed=True,
+            ),
+            GradeInput(
+                external_id="seed-emma-cj",
+                subject=SubjectInput(code="ČJ", name="Český jazyk"),
+                value="2",
+                weight=1,
+                graded_on=today - timedelta(days=4),
+                confirmed=False,
+            ),
+        ],
+    )
+    await school.apply_homework(
+        kids["Emma"].id,
+        household.id,
+        [
+            HomeworkInput(
+                external_id="seed-emma-hw",
+                subject=SubjectInput(code="M", name="Matematika"),
+                text="Worksheet p. 34",
+                due_on=tomorrow,
+                attachments=["worksheet-34.pdf"],
+            )
+        ],
+    )
+
+    await school.apply_day(
+        kids["Leo"].id,
+        household.id,
+        today,
+        [lesson(1, "M", "Matematika"), lesson(2, "TV", "Tělesná výchova")],
+    )
+    await school.apply_day(kids["Leo"].id, household.id, tomorrow, [lesson(1, "ČJ", "Český jazyk")])
+    await school.apply_grades(
+        kids["Leo"].id,
+        household.id,
+        [
+            GradeInput(
+                external_id="seed-leo-m",
+                subject=SubjectInput(code="M", name="Matematika"),
+                value="2",
+                weight=1,
+                graded_on=today - timedelta(days=5),
+                confirmed=True,
+            )
+        ],
+    )
+
+    for kid, subject_code, _name, items in (
+        ("Emma", "TV", "", ["Gym kit", "Water bottle"]),
+        ("Emma", "PČ", "", ["Art apron"]),
+        ("Leo", "TV", "", ["Gym kit"]),
+    ):
+        target = next(s for s in await school.subjects_for(kids[kid].id) if s.code == subject_code)
+        await school.set_equipment(kids[kid].id, target.id, items)
+
+
 async def seed() -> None:
     ensure_full_metadata()
     settings = get_settings()
@@ -215,6 +314,7 @@ async def seed() -> None:
     households = HouseholdRepository(sessions)
     events = CalendarRepository(sessions)
     meals = MealsRepository(sessions)
+    school = SchoolService(SchoolRepository(sessions))
     household = await households.get()
     if household is None:
         household = await households.create(CreateHouseholdRequest(timezone=settings.timezone))
@@ -233,6 +333,7 @@ async def seed() -> None:
             for seed_event in build_seed_events(household, today):
                 await events.add(seed_event.event, seed_event.participant_ids)
         await _seed_meals(meals, household, today)
+        await _seed_school(school, household, today)
     await engine.dispose()
 
 

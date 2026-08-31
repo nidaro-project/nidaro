@@ -49,6 +49,9 @@ class SchoolRepository:
             )
             for row in existing:
                 await session.delete(row)
+            # Emit the DELETEs before the INSERTs: a same-flush replace would
+            # otherwise collide with the (member, day, position) unique key.
+            await session.flush()
             rows = [
                 Lesson(
                     household_id=household_id,
