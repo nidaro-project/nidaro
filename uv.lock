@@ -446,6 +446,18 @@ wheels = [
 ]
 
 [[package]]
+name = "chrome-agent"
+version = "0.5.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "websockets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/08/1e/c26a12c596af651acc83dff35dd11206089a5116ba4849f88b31cacf1145/chrome_agent-0.5.8.tar.gz", hash = "sha256:94f1e2cedb095b7650f022cc406980a5fa4f21e5ace84a8e911be5bd80d41f7d", size = 133117, upload-time = "2026-08-24T02:35:22.466Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/19/4c00a0ddd0a81decb4cf5a2879e6ded6cfea56f6991249f795643b2e0613/chrome_agent-0.5.8-py3-none-any.whl", hash = "sha256:6bfa6dac43b81997589fb2b10a4e9044f94e6598bebe95be9f1649b76682e157", size = 170149, upload-time = "2026-08-24T02:35:21.285Z" },
+]
+
+[[package]]
 name = "click"
 version = "8.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1329,6 +1341,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "chrome-agent" },
     { name = "cryptography" },
     { name = "fastapi" },
     { name = "httpx" },
@@ -1356,6 +1369,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.16,<2" },
+    { name = "chrome-agent", specifier = ">=0.5.8,<0.6" },
     { name = "cryptography", specifier = ">=44,<51" },
     { name = "fastapi", specifier = ">=0.116,<1" },
     { name = "httpx", specifier = ">=0.28,<1" },
