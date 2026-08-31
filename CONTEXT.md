@@ -82,3 +82,27 @@ _Avoid_: mark, známka (as code terms)
 **Homework**:
 A task a kid must do for a subject by a due date, gathered from the school system. Shown with attachment names only, never file bodies. Empty when the school does not enter homework.
 _Avoid_: assignment
+
+**Connector**:
+A read-only gatherer for one external source (iCloud, a school system, WhatsApp). It pulls on a per-household schedule and produces external records; it never edits Nidaro's own tables and never writes back to the source.
+_Avoid_: integration (implies two-way), plugin
+
+**External record**:
+The envelope one connector sync hands to a domain service: connector, type, stable external id, payload, content hash. The only shape external data may arrive in.
+_Avoid_: raw event (the payload is just one field)
+
+**Mirror**:
+An Event kept in step with an external record by a domain service, identified by connector plus external id. Edited only by re-sync, removed when a tombstone arrives — the family edits their own events, not mirrors.
+_Avoid_: synced event, copy
+
+**Tombstone**:
+The signal that a source deleted an item, or marked it cancelled; it removes the mirror instead of updating it. A cancelled external activity disappears from the calendar rather than showing struck-through.
+_Avoid_: deletion flag, cancelled status (the source's word for its own state)
+
+**App-specific password**:
+A per-member, individually revocable password Apple requires before any iCloud access; the Apple ID must have two-factor authentication. Stored encrypted, referenced by name in the connector config; when it stops working the fix is reconnect, not data loss.
+_Avoid_: Apple password (the account password — changing it revokes every app-specific password at once)
+
+**iCloud calendars**:
+The family's Apple calendars, read over CalDAV on a poll — Apple offers no push channel, so fresh means within one poll cycle. Nidaro reads only; write-back does not exist.
+_Avoid_: calendar sync (which source?), push (none exists)

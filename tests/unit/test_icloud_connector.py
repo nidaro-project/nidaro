@@ -32,7 +32,6 @@ from nidaro.household.repository import HouseholdRepository
 CALENDAR_URL = "https://p12-caldav.icloud.com/1711/calendars/home/"
 SOCCER_HREF = "/1711/calendars/home/soccer.ics"
 DENTIST_HREF = "/1711/calendars/home/dentist.ics"
-GONE_HREF = "/1711/calendars/home/gone.ics"
 TOKEN_A = "https://idmsa.apple.com/token/1"
 TOKEN_B = "https://idmsa.apple.com/token/2"
 
