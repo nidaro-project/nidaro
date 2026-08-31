@@ -1,9 +1,9 @@
 """School portal: per-kid Today at school, Grades, Homework, what-to-pack.
 
 Adopted shape from [portal-4] (variant B, "Module feed"): kid rail, module stacks.
-Reads go through the school domain service only. The freshness stamp and manual
-refresh action land with the gatherer ([portal-7]); the page renders the gather
-state the data carries today. The packing overview ([portal-9]) is derived on
+Reads go through the school domain service only. The gatherer ([portal-7]) fills
+the refresh action and the gather-failure notice; the freshness stamp renders
+from the gathered rows themselves. The packing overview ([portal-9]) is derived on
 read: materialized lessons joined with household-maintained subject equipment.
 """
 
@@ -14,6 +14,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from nidaro.connectors.bakalari import BAKALARI
+from nidaro.connectors.models import ConnectorContext
 from nidaro.container import ApplicationServices
 from nidaro.web.dependencies import get_services
 from nidaro.web.routes.ui import _nav, templates
@@ -21,6 +23,8 @@ from nidaro.web.routes.ui import _nav, templates
 router = APIRouter(prefix="/school", include_in_schema=False)
 
 Services = Annotated[ApplicationServices, Depends(get_services)]
+
+GATHER_ERROR = "The gather failed — check the household's Bakaláři accounts."
 
 
 def _kids(household) -> list[Any]:
@@ -57,7 +61,7 @@ async def school(
         "kids": kids,
         "kid": selected,
         "today": date.today(),
-        "gather_error": None,
+        "gather_error": GATHER_ERROR if request.query_params.get("gather") == "error" else None,
         "lessons": [],
         "grades": [],
         "homework": [],
@@ -73,6 +77,37 @@ async def school(
 async def _render_packing(request: Request, services: ApplicationServices, kid_id: UUID):
     context = {"kid": None, "gather_error": None} | await _packing(services, kid_id)
     return templates.TemplateResponse(request, "school_packing.html", context)
+
+
+def _back(kid: UUID | None, gather_error: bool) -> str:
+    parts: list[str] = []
+    if kid is not None:
+        parts.append(f"kid={kid}")
+    if gather_error:
+        parts.append("gather=error")
+    return "/school" + ("?" + "&".join(parts) if parts else "")
+
+
+@router.post("/refresh")
+async def refresh_gather(services: Services, kid: Annotated[UUID | None, Form()] = None):
+    """Manual gather: sync the household's Bakaláři accounts now, then redirect.
+
+    The sync rides the same ConnectorService seam as the hourly worker, so a
+    failed gather leaves the config un-stamped and stays due. A failure message
+    rides the redirect; success is visible as fresh data and its stamp.
+    """
+    household = await services.household.get_household()
+    if household is None:
+        raise HTTPException(status_code=404, detail="Household not seeded")
+    failed = False
+    try:
+        await services.connectors.sync(
+            BAKALARI,
+            ConnectorContext(household_id=str(household.id), timezone=household.timezone),
+        )
+    except Exception:
+        failed = True
+    return RedirectResponse(_back(kid, failed), status_code=303)
 
 
 @router.post("/subjects/{subject_id}/equipment")
