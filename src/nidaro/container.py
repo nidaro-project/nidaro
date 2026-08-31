@@ -8,6 +8,14 @@ from nidaro.commitments.repository import CommitmentRepository
 from nidaro.commitments.service import CommitmentService
 from nidaro.config import get_settings
 from nidaro.connectors.crypto import SecretBox
+from nidaro.connectors.google_calendar.accounts import (
+    GoogleCalendarAccountRepository,
+    GoogleCalendarAccountService,
+)
+from nidaro.connectors.google_calendar.client import GoogleCalendarClient
+from nidaro.connectors.google_calendar.connector import GoogleCalendarConnector
+from nidaro.connectors.google_calendar.oauth import GoogleOAuthSettings
+from nidaro.connectors.google_calendar.writes import GoogleCalendarWriteService
 from nidaro.connectors.registry import ConnectorRegistry
 from nidaro.connectors.repository import (
     ConnectorConfigRepository,
@@ -51,12 +59,25 @@ class ApplicationServices:
     connectors: ConnectorService
     credentials: ConnectorCredentialService
     connector_configs: ConnectorConfigService
+    google_accounts: GoogleCalendarAccountService
+    google_writes: GoogleCalendarWriteService
 
     @classmethod
     def build(cls, sessions: async_sessionmaker[AsyncSession]) -> "ApplicationServices":
+        household = HouseholdService(HouseholdRepository(sessions))
+        calendar = CalendarService(CalendarRepository(sessions), HouseholdRepository(sessions))
+        credentials = ConnectorCredentialService(
+            ConnectorCredentialRepository(sessions), SecretBox.from_settings(get_settings())
+        )
+        google_accounts = GoogleCalendarAccountService(
+            GoogleCalendarAccountRepository(sessions), credentials
+        )
+        google_client = GoogleCalendarClient(GoogleOAuthSettings.from_settings(get_settings()))
+        registry = ConnectorRegistry()
+        registry.register(GoogleCalendarConnector(google_accounts, google_client))
         return cls(
-            household=HouseholdService(HouseholdRepository(sessions)),
-            calendar=CalendarService(CalendarRepository(sessions), HouseholdRepository(sessions)),
+            household=household,
+            calendar=calendar,
             meals=MealsService(MealsRepository(sessions)),
             school=SchoolService(SchoolRepository(sessions)),
             tasks=TaskService(TaskRepository(sessions)),
@@ -66,12 +87,14 @@ class ApplicationServices:
             conversations=ConversationService(ConversationRepository(sessions)),
             jobs=JobService(sessions),
             connectors=ConnectorService(
-                ConnectorRegistry(),
+                registry,
                 ConnectorCursorRepository(sessions),
                 ConnectorConfigRepository(sessions),
             ),
-            credentials=ConnectorCredentialService(
-                ConnectorCredentialRepository(sessions), SecretBox.from_settings(get_settings())
-            ),
+            credentials=credentials,
             connector_configs=ConnectorConfigService(ConnectorConfigRepository(sessions)),
+            google_accounts=google_accounts,
+            google_writes=GoogleCalendarWriteService(
+                google_accounts, google_client, calendar, household
+            ),
         )

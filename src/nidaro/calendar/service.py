@@ -40,6 +40,13 @@ class CalendarService:
     async def create_event(self, request: CreateEventRequest) -> EventView:
         return EventView.model_validate(await self.repository.create(request))
 
+    async def get_mirror(
+        self, household_id: UUID, connector: str, external_id: str
+    ) -> EventView | None:
+        """The mirrored event for one external item, if it has been landed."""
+        event = await self.repository.get_by_external_identity(household_id, connector, external_id)
+        return EventView.model_validate(event) if event else None
+
     async def apply_external_records(
         self, household_id: UUID, records: Sequence[ExternalRecord]
     ) -> MirrorApplyReport:
