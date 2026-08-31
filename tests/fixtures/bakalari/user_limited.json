@@ -8,7 +8,6 @@
   "Class": "6.A",
   "EnabledModules": {
     "Komens": {"Rights": {"ShowReceivedMessages": true}},
-    "Marks": {"Rights": {"ShowMarks": false}},
     "Absence": {"Rights": {"ShowAbsence": true}},
     "Events": true
   }
