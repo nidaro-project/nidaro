@@ -8,7 +8,13 @@ from nidaro.calendar.repository import CalendarRepository
 from nidaro.calendar.service import CalendarService
 from nidaro.connectors.crypto import SecretBox
 from nidaro.connectors.icloud_calendar import CONNECTOR_NAME
-from nidaro.connectors.models import ExternalRecord, SyncResult
+from nidaro.connectors.models import (
+    ConnectorConfig,
+    ConnectorCredential,
+    ConnectorCursor,
+    ExternalRecord,
+    SyncResult,
+)
 from nidaro.connectors.registry import ConnectorRegistry
 from nidaro.connectors.repository import ConnectorConfigRepository
 from nidaro.connectors.runner import sync_connector, sync_due
@@ -19,6 +25,7 @@ from nidaro.connectors.service import (
 )
 from nidaro.db.types import new_uuid, utc_now
 from nidaro.household.repository import HouseholdRepository
+from nidaro.household.service import HouseholdService
 
 
 class FakeHouseholdRepository(HouseholdRepository):
@@ -26,6 +33,16 @@ class FakeHouseholdRepository(HouseholdRepository):
         pass
 
     async def get(self, household_id=None):
+        return None
+
+
+class FakeHouseholdService(HouseholdService):
+    """No household rows: the sweep falls back to UTC."""
+
+    def __init__(self):
+        pass
+
+    async def get_household(self, household_id=None):
         return None
 
 
@@ -76,13 +93,26 @@ class FakeMirrorRepository(CalendarRepository):
 
 class FakeCursorRepository:
     def __init__(self):
-        self.rows: dict[tuple[UUID, str], str] = {}
+        self.rows: dict[tuple[UUID, str], ConnectorCursor] = {}
 
     async def get(self, household_id, connector):
-        return self.rows.get((household_id, connector))
+        row = self.rows.get((household_id, connector))
+        return row.cursor if row else None
 
     async def save(self, household_id, connector, cursor):
-        self.rows[(household_id, connector)] = cursor
+        row = self.rows.get((household_id, connector))
+        if row is None:
+            row = ConnectorCursor(
+                household_id=household_id,
+                connector=connector,
+                cursor=cursor,
+                created_at=utc_now(),
+                updated_at=utc_now(),
+            )
+            self.rows[(household_id, connector)] = row
+        else:
+            row.cursor = cursor
+        return row
 
     async def clear(self, household_id, connector):
         return self.rows.pop((household_id, connector), None) is not None
@@ -131,7 +161,6 @@ class FakeConfigRepository(ConnectorConfigRepository):
         trigger_word,
         poll_seconds,
     ):
-        from nidaro.connectors.models import ConnectorConfig
 
         row = await self.get(household_id, connector)
         if row is None:
@@ -168,23 +197,32 @@ class FakeCredentialRepository:
     """Ciphertext-at-rest stand-in: values only decryptable with the box."""
 
     def __init__(self):
-        self.rows: dict[tuple[UUID, str, str], str] = {}
+        self.rows: dict[tuple[UUID, str, str], ConnectorCredential] = {}
 
     async def get_ciphertext(self, household_id, connector, name):
-        return self.rows.get((household_id, connector, name))
+        row = self.rows.get((household_id, connector, name))
+        return row.secret if row else None
 
     async def save_ciphertext(self, household_id, connector, name, ciphertext):
-        self.rows[(household_id, connector, name)] = ciphertext
-        return ciphertext
+        row = ConnectorCredential(
+            household_id=household_id,
+            connector=connector,
+            name=name,
+            secret=ciphertext,
+            created_at=utc_now(),
+            updated_at=utc_now(),
+        )
+        self.rows[(household_id, connector, name)] = row
+        return row
 
     async def delete(self, household_id, connector, name):
         return self.rows.pop((household_id, connector, name), None) is not None
 
     async def names(self, household_id, connector):
-        return [key[2] for key in self.rows if key[:2] == (household_id, connector)]
+        return sorted(key[2] for key in self.rows if key[:2] == (household_id, connector))
 
     async def all(self):
-        return []
+        return list(self.rows.values())
 
 
 class RecordingConnector:
@@ -205,15 +243,15 @@ class RecordingConnector:
 class RunnerServices:
     """The ConnectorSyncServices slice, real services over fakes."""
 
-    def __init__(self, rows, batches):
+    def __init__(self, rows=(), batches=()):
         self.mirrors = FakeMirrorRepository()
         self.calendar = CalendarService(self.mirrors, FakeHouseholdRepository())
         self.credentials = ConnectorCredentialService(
-            FakeCredentialRepository(), SecretBox(Fernet.generate_key())
+            FakeCredentialRepository(), SecretBox(Fernet.generate_key().decode())
         )
         self.connectors = ConnectorService(ConnectorRegistry(), FakeCursorRepository())
         self.connector_configs = ConnectorConfigService(FakeConfigRepository(rows))
-        self.household = FakeHouseholdRepository()
+        self.household = FakeHouseholdService()
 
         self.connector = RecordingConnector(batches)
         self.connectors.registry.register(self.connector)

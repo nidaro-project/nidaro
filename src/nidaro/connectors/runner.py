@@ -29,7 +29,7 @@ from nidaro.connectors.service import (
     ConnectorCredentialService,
     ConnectorService,
 )
-from nidaro.household.repository import HouseholdRepository
+from nidaro.household.service import HouseholdService
 
 CALENDAR_EVENT = "calendar_event"
 
@@ -39,15 +39,24 @@ CREDENTIALS_UNAVAILABLE = "credentials unavailable"
 class ConnectorSyncServices(Protocol):
     """The slice of `ApplicationServices` a sync sweep needs.
 
-    `ApplicationServices` satisfies this structurally; tests satisfy it
-    with fakes without constructing the full container.
+    Members are read-only properties so frozen dataclasses (the real
+    container) and plain test fakes both satisfy the protocol.
     """
 
-    calendar: CalendarService
-    connectors: ConnectorService
-    connector_configs: ConnectorConfigService
-    credentials: ConnectorCredentialService
-    household: HouseholdRepository
+    @property
+    def calendar(self) -> CalendarService: ...
+
+    @property
+    def connectors(self) -> ConnectorService: ...
+
+    @property
+    def connector_configs(self) -> ConnectorConfigService: ...
+
+    @property
+    def credentials(self) -> ConnectorCredentialService: ...
+
+    @property
+    def household(self) -> HouseholdService: ...
 
 
 class SyncOutcome(BaseModel):
@@ -101,7 +110,7 @@ async def sync_connector(
         secret = await services.credentials.get(household_id, connector, name)
         if secret is not None:
             credentials[name] = secret
-    household = await services.household.get(household_id)
+    household = await services.household.get_household(household_id)
     context = ConnectorContext(
         household_id=str(household_id),
         timezone=household.timezone if household else "UTC",

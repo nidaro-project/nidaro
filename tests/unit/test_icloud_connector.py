@@ -23,7 +23,7 @@ from nidaro.connectors.icloud_calendar import (
     merge_tombstones,
     sync_collection_body,
 )
-from nidaro.connectors.models import ConnectorContext
+from nidaro.connectors.models import ConnectorContext, ConnectorCursor
 from nidaro.connectors.registry import ConnectorRegistry
 from nidaro.connectors.service import ConnectorService
 from nidaro.db.types import new_uuid, utc_now
@@ -101,6 +101,12 @@ def listing(changed=(), deleted=(), token=TOKEN_A):
     return SyncChanges(changed=changed, deleted=deleted, token=token)
 
 
+def cursor_state(result):
+    """The connector always emits a cursor; narrow for the JSON round-trip."""
+    assert result.next_cursor is not None
+    return json.loads(result.next_cursor)
+
+
 def fetch(href, ics):
     return FetchedIcs(href=href, ics=ics)
 
@@ -150,7 +156,7 @@ async def test_first_sync_fetches_everything_and_stores_the_token_map():
     assert soccer.payload["recurrence_weekdays"] == [0]
     assert soccer.payload["calendar_url"] == CALENDAR_URL
 
-    state = json.loads(result.next_cursor)
+    state = cursor_state(result)
     (entry,) = state["calendars"].values()
     assert entry["token"] == TOKEN_A
     assert entry["items"][SOCCER_HREF] == ["soccer@example.com"]
@@ -168,7 +174,7 @@ async def test_incremental_sync_replays_the_stored_token():
     # Nothing changed server-side: no second fetch, no records.
     assert second.records == []
     assert session.fetched_hrefs == [[SOCCER_HREF, DENTIST_HREF]]
-    assert json.loads(second.next_cursor)["calendars"][CALENDAR_URL]["token"] == TOKEN_A
+    assert cursor_state(second)["calendars"][CALENDAR_URL]["token"] == TOKEN_A
 
 
 @pytest.mark.anyio
@@ -186,7 +192,7 @@ async def test_changed_event_is_refetched_and_updated():
         (record.external_id, record.payload["starts_at"].hour) for record in second.records
     ] == [("soccer@example.com", 17)]
     assert session.fetched_hrefs[-1] == [SOCCER_HREF]  # only the changed resource
-    state = json.loads(second.next_cursor)
+    state = cursor_state(second)
     assert state["calendars"][CALENDAR_URL]["token"] == TOKEN_B
 
 
@@ -204,7 +210,7 @@ async def test_server_tombstone_removes_the_mirror_record():
     assert tombstone.external_id == "soccer@example.com"
     assert tombstone.deleted is True
     assert tombstone.external_type == CALENDAR_EVENT
-    state = json.loads(second.next_cursor)
+    state = cursor_state(second)
     assert SOCCER_HREF not in state["calendars"][CALENDAR_URL]["items"]
 
 
@@ -257,7 +263,7 @@ async def test_cancelled_status_mirrors_as_tombstone():
     record = next(r for r in result.records if r.external_id == "soccer@example.com")
     assert record.deleted is True
     # Cancelled events stay out of the href memory: nothing left to remove.
-    state = json.loads(result.next_cursor)
+    state = cursor_state(result)
     assert state["calendars"][CALENDAR_URL]["items"][SOCCER_HREF] == []
 
 
@@ -277,7 +283,7 @@ async def test_invalidated_token_full_relist_is_a_normal_sync():
         "dentist@example.com",
     }
     assert all(record.deleted is False for record in second.records)
-    state = json.loads(second.next_cursor)
+    state = cursor_state(second)
     assert state["calendars"][CALENDAR_URL]["token"] == TOKEN_A
 
 
@@ -289,7 +295,7 @@ async def test_report_failure_falls_back_to_full_calendar_query():
     result = await IcloudCalendarConnector(lambda u, p: session).sync(context(), None)
 
     assert {record.external_id for record in result.records} >= {"soccer@example.com"}
-    state = json.loads(result.next_cursor)
+    state = cursor_state(result)
     assert state["calendars"][CALENDAR_URL]["token"] is None  # retry sync next run
 
 
@@ -436,13 +442,26 @@ class FakeHouseholdRepository(HouseholdRepository):
 
 class FakeCursorRepository:
     def __init__(self):
-        self.rows: dict[tuple[UUID, str], str] = {}
+        self.rows: dict[tuple[UUID, str], ConnectorCursor] = {}
 
     async def get(self, household_id, connector):
-        return self.rows.get((household_id, connector))
+        row = self.rows.get((household_id, connector))
+        return row.cursor if row else None
 
     async def save(self, household_id, connector, cursor):
-        self.rows[(household_id, connector)] = cursor
+        row = self.rows.get((household_id, connector))
+        if row is None:
+            row = ConnectorCursor(
+                household_id=household_id,
+                connector=connector,
+                cursor=cursor,
+                created_at=utc_now(),
+                updated_at=utc_now(),
+            )
+            self.rows[(household_id, connector)] = row
+        else:
+            row.cursor = cursor
+        return row
 
     async def clear(self, household_id, connector):
         return self.rows.pop((household_id, connector), None) is not None

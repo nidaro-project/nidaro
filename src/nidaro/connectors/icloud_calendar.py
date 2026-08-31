@@ -183,7 +183,10 @@ class CaldavIcloudClient:
     """
 
     def __init__(self, username: str, password: str, url: str = ICLOUD_URL) -> None:
-        from caldav import DAVClient
+        # Import from the concrete module: caldav's package __init__ exposes
+        # DAVClient through PEP 562 lazy __getattr__, which type checkers
+        # see as a plain object.
+        from caldav.davclient import DAVClient
 
         # One client per sync run; sessions are not shared across tasks.
         self._client = DAVClient(url=url, username=username, password=password, timeout=60)
@@ -191,7 +194,12 @@ class CaldavIcloudClient:
     def calendar_urls(self) -> list[str]:
         with _translate_auth_errors():
             principal = self._client.principal()
-            return [str(calendar.url) for calendar in principal.calendars()]
+            calendars = principal.calendars()
+        # The sync client returns the list directly; the union in caldav's
+        # annotation exists because async clients share the method.
+        if isinstance(calendars, list):
+            return [str(calendar.url) for calendar in calendars]
+        raise TypeError("unexpected coroutine from a synchronous CalDAV client")
 
     def sync_changes(self, calendar_url: str, token: str | None) -> SyncChanges:
         with _translate_auth_errors():

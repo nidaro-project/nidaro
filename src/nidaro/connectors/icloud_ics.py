@@ -193,6 +193,9 @@ def _decode_event(component, uid: str, tz: ZoneInfo) -> IcsEvent | None:
         end = datetime.combine(end, time.min, tzinfo=tz)
     status = str(component.get("STATUS") or "").strip().upper()
     recurrence = component.get("RECURRENCE-ID")
+    recurrence_id = _decode_when(recurrence, tz) if recurrence is not None else None
+    if isinstance(recurrence_id, date) and not isinstance(recurrence_id, datetime):
+        recurrence_id = datetime.combine(recurrence_id, time.min, tzinfo=tz)
     rrule = component.get("RRULE")
     return IcsEvent(
         uid=uid,
@@ -203,7 +206,7 @@ def _decode_event(component, uid: str, tz: ZoneInfo) -> IcsEvent | None:
         description=_text(component.get("DESCRIPTION")),
         location=_text(component.get("LOCATION")),
         status=CANCELLED if status == "CANCELLED" else "scheduled",
-        recurrence_id=_decode_when(recurrence, tz) if recurrence is not None else None,
+        recurrence_id=recurrence_id,
         rrule=_canonical_rrule_dict(rrule) if rrule is not None else None,
     )
 
