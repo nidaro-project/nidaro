@@ -9,11 +9,8 @@ from nidaro.calendar import models as _calendar_models
 from nidaro.commitments import models as _commitment_models
 from nidaro.config import get_settings
 from nidaro.connectors import models as _connector_models
-<<<<<<< HEAD
-from nidaro.connectors.whatsapp import models as _whatsapp_models
-=======
 from nidaro.connectors.google_calendar import models as _google_calendar_models
->>>>>>> feat/google-calendar
+from nidaro.connectors.whatsapp import models as _whatsapp_models
 from nidaro.conversations import models as _conversation_models
 from nidaro.db.base import Base
 from nidaro.household import models as _household_models
