@@ -10,6 +10,9 @@
 - Prefix shell commands with `rtk` (see `RTK.md`). It is a token-optimizing proxy; `rtk proxy <cmd>` runs the raw command when you need unfiltered output.
 - When a request hinges on a runtime property ("runs in the background", "survives closing the session", "only the user can trigger it"), verify the chosen mechanism has that property before building. If two mechanisms plausibly fit, confirm the split with the user first.
 - Use `aufsicht fast` during implementation and `aufsicht full` before a change is complete.
+- Workflow scripts: `agent`, `parallel`, `phase`, and `args` are provided globals — never declare variables with those names, pass thunks to `parallel([...])` (never to `Promise.all`, which does not invoke them), and before redesigning around a suspected runtime limitation, verify it: inspect what the script actually returned (agents that never ran leave no transcript and empty results) and re-read the tool's own API description.
+- Integration tests that need real PostgreSQL must probe-and-skip, following `tests/integration/test_database.py`: CI's test job provides an empty database (no migrations, no seed) and the aufsicht job has none. Verify a new integration test against an unmigrated database before pushing.
+- Modify files with the edit and write tools, not with inline python/sed string-replacement in bash; a bad match silently corrupts the file, and every corruption costs a full rewrite.
 
 ## Nidaro architecture
 

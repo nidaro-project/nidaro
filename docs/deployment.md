@@ -174,6 +174,25 @@ restarts the API, worker, and scheduler. Restarting a single app unit by
 hand (`systemctl --user restart nidaro-prod-api.service`) does not re-run
 migrations; only `nidaro-prod-migrate.service` does.
 
+### Adding or changing a Quadlet unit
+
+`update.sh` rebuilds images and cycles the app units; it does **not** install
+new unit files. After adding a `.container`/`.volume` file under
+`deploy/quadlet/`, install it:
+
+```bash
+ln -sf ~/devel/lab/agenterio/nidaro/deploy/quadlet/nidaro-prod-<name>.container \
+  ~/.config/containers/systemd/
+systemctl --user daemon-reload
+```
+
+Then verify the unit actually generated: an unsupported key (e.g. `Init=` on
+older Quadlets) makes the generator **silently skip the whole unit**.
+
+```bash
+systemctl --user list-unit-files 'nidaro-prod-*'   # the new unit must be listed
+```
+
 ## Changing configuration or secrets
 
 Edit `~/.config/nidaro/prod.env`, then restart:
