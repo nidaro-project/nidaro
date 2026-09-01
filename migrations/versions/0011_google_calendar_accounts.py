@@ -5,7 +5,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "0011_google_calendar_accounts"
-down_revision = "0009_connector_household_config"
+down_revision = "0010_whatsapp_staging"
 branch_labels = None
 depends_on = None
 
